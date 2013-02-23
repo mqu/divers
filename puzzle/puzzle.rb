@@ -58,6 +58,15 @@ class Piece
 		@rotate = 0
 		self
 	end
+	
+	def contains l
+		l.each { |e|
+			return false if ! self.has? e
+		}
+		
+		return true
+		
+	end
 end
 
 class Solver
@@ -104,8 +113,12 @@ class Tas
 		@pieces << p
 	end
 
+	def <
+		self.prendre(0)
+	end
+
 	# prendre une pièce dans le tas : aléatoire ou suivant son index
-	def prendre(idx)
+	def take(idx)
 		if idx == :random
 			p = @pieces.sample
 		else
@@ -113,14 +126,40 @@ class Tas
 		end
 		@pieces.delete(p)
 	end
+	
+	def find(l=[])
+		list = []
+		@pieces.each { |p|
+			list << p if p.contains l
+		}
+		return list
+	end
 end
 
 tas = Tas.new
-pp tas.prendre(0)
-pp tas.prendre(0)
 pp tas
+puts ("---------")
+# pp tas.take(0)
+# pp tas.take(0)
+# pp tas
 
-pp tas.clone
+# distribution non uniforme des pièces :
+# find : 0 ; 5
+# find : 1 ; 4
+# find : 2 ; 3
+# find : 3 ; 6
+# find : 4 ; 5
+# find : 5 ; 4
+# find : 6 ; 6
+# find : 7 ; 3
+#(0..7).each { |i|
+#	l = tas.find [i]
+#	puts "# find : #{i} ; #{l.length}"
+#	pp l
+#	puts "\n\n"
+#}
+pp tas.find [0, 1, 2]
+pp tas.find [7, 2, 0]
 
 exit
 
