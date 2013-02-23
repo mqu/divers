@@ -59,6 +59,7 @@ class Piece
 		self
 	end
 	
+	# check if Piece contains array 'l' of values.
 	def contains l
 		l.each { |e|
 			return false if ! self.has? e
@@ -76,6 +77,7 @@ class Solver
 
 	end
 	
+	# not really a solver yet.
 	def solve
 		m1 = memory_usage
 		list = []
@@ -92,6 +94,8 @@ class Solver
 	end
 end
 
+# le tas est là ou sont placées les pièces avant d'être déposées sur la grille (puzzle).
+# c'est dans le Tas que sont crées toutes les instances de Pièces (à l'initialisation).
 class Tas
 
 	# création du tas avec toutes les pièces.
@@ -113,10 +117,6 @@ class Tas
 		@pieces << p
 	end
 
-	def <
-		self.prendre(0)
-	end
-
 	# prendre une pièce dans le tas : aléatoire ou suivant son index
 	def take(idx)
 		if idx == :random
@@ -127,6 +127,7 @@ class Tas
 		@pieces.delete(p)
 	end
 	
+	# retrouve les pièces contenant les chiffres passés en parametres (l:array).
 	def find(l=[])
 		list = []
 		@pieces.each { |p|
