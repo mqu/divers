@@ -1,0 +1,79 @@
+
+
+- puzzle à 9 pièces
+- 4 insectes : abeille (bee), araignée (spider), coccinelle (lady bug), grillon (cricket)
+- 2 parties : têtes (antérieur)/top et postérieur/bottom,
+
+inventaire des pièces :
+
+ - 1 : sb, bt, st, cb (spider bottom, bee top, spider top, cricket bottom)
+ - 2 : cb, lb, st, bt
+ - 3 : sb, lt, ct, bt
+ - 4 : cb, lt, bt, bb,
+ - 5 : sb, bb, ct, lt
+ - 6 : cb, bt, st, lb
+ - 7 : ct, st, lt, lb
+ - 8 : st, lt, cb, bt
+ - 9 : lb, cb, sb, bb.
+
+
+autre notation :
+ - A : abeille,
+ - B : araignée,
+ - C : coccinelle
+ - D : grillon
+
+ - B : bas du corps de l'araignée,
+ - b : haut du corp (tête) de l'araigné
+
+inventaire :
+ - 1 : Ba
+ - 2 : 
+ - 3 : 
+ - 4 : 
+ - 5 : 
+ - 6 : 
+ - 7 : 
+ - 8 : 
+ - 9 : 
+
+notation utilisée par Pierre : (pas nécessairement même ordre des pièces que 1 et 2 ci-dessus)
+
+   0 coccinelle top
+   1 coccinelle bottom
+   2 sauterelle top
+   3 sauterelle bottom
+   4 araignée top
+   5 araignée bottom
+   6 abeille top
+   7 abeille bottom
+
+et l'inventaire des pièces :
+
+	piece[0] = new Piece(4, 0, 1, 2);
+	piece[1] = new Piece(7, 2, 0, 5);
+	piece[2] = new Piece(3, 5, 7, 1);
+	piece[3] = new Piece(6, 4, 0, 3);
+	piece[4] = new Piece(6, 4, 3, 5);
+	piece[5] = new Piece(5, 0, 2, 6);
+	piece[6] = new Piece(6, 3, 1, 4);
+	piece[7] = new Piece(6, 7, 3, 0);
+	piece[8] = new Piece(6, 4, 1, 3);
+
+avantages : 
+ - compacte,
+ - le test de la coincidance (match) se fait avec une combinaison de modulo :
+
+	public static boolean match(int a, int b) // 0 coc, 1 cul cocc, etc ...
+	{
+		return (a / 2 == b / 2 && a % 2 != b % 2);
+	}
+
+
+liens :
+ - http://fr.wikipedia.org/wiki/Algorithme_A*
+ - http://khayyam.developpez.com/articles/algo/astar/
+ - http://code.google.com/p/blockly/?redir=1
+ - http://blockly-demo.appspot.com/static/apps/index.html
+ - http://heuristicswiki.wikispaces.com/N+-+Puzzle
+
