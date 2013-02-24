@@ -206,6 +206,12 @@ class Tas
 		}
 		return list
 	end
+
+	# retrouve toutes les pièces ayant les id, mais dans l'ordre.
+	def find_strict(l=[])
+		# FIXME : à terminer.
+		self.find l
+	end
 end
 
 case ARGV[0]
