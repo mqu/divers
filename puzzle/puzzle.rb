@@ -76,6 +76,12 @@ class Puzzle
 		return true if @case[p2] == nil
 		
 	end
+
+	# check if puzzle solved.
+	def solved?
+		return false  # FIXME
+	end
+
 end
 
 class Piece
@@ -134,7 +140,7 @@ class Solver
 
 	def initialize
 		@puzzle = Puzzle.new
-
+		@tas = Tas.new
 	end
 	
 	# not really a solver yet.
@@ -151,6 +157,21 @@ class Solver
 		m2 = memory_usage
 		
 		printf("memory : %d\n", (m2 - m1))
+	end
+
+	def print
+		pp @tas
+		pp @puzzle
+	end
+end
+
+# un solveur aléatoire : ne parviendra jamais à résoudre le problème.
+class RandomSolver < Solver
+
+	def solve
+		(1..9).each {
+			@puzzle << @tas.take(:random)
+		}
 	end
 end
 
@@ -264,6 +285,10 @@ when "tas:find"
 when "solver"
 	solver = Solver.new(tas)
 	pp solver
-
+	
+when "random-solver"
+	solver = RandomSolver.new
+	solver.solve
+	solver.print
 end
 
