@@ -1,6 +1,8 @@
 #!/usr/bin/ruby
 # coding: UTF-8
 
+# source location : https://github.com/mqu/divers/tree/master/puzzle
+
 require 'pp'
 
 def memory_usage 
@@ -9,13 +11,64 @@ end
 
 class Puzzle
 
+	# Puzzle :
+	#	- les cases : numérotées : 1..9 (0..8 pour le programme)
+	#	- disposition :
+	#		1 2 3 | 0 1 2 
+	#		4 5 6 | 3 4 5
+	#		7 8 9 | 6 7 8
+	#
+	# Piece :
+	# - possède 4 valeurs disposées sur chaque face.
+	# 	     3
+	#	   2 P 0
+	#		 1
+
 	def initialize
-		@cases = []
+		self.reset
 	end
-	
+
 	# insère la pièce "p" sur le puzzle sans gérer l'ordre.
 	def << p
 		@cases << p
+	end
+
+	def put p, idx
+		raise "index error" if idx<0 || idx > 8
+		@case[idx] = p
+	end
+
+	def reset
+		# une case vide est marquée par nil
+		@cases = [
+			nil, nil, nil, 
+			nil, nil, nil, 
+			nil, nil, nil]
+	end
+
+	def match pos
+		case pos
+			when 0
+				self.matchx(0, 1, 0, 2) && self.matchx(0, 3, 1, 3)
+			when 1
+			when 2
+			when 3
+			when 4
+			when 5
+			when 6
+			when 7
+			when 8
+		end
+	end
+	
+	# vérifie si 2 pièces "match" (coincident)
+	# - p1, p2 : sont les index des pièces sur @cases
+	# - x1, x2 : sont les faces des pièces à matcher.
+	def matchx (p1, p2, x1, x2)
+		# une case vide match toujours !
+		return true if @case[p1] == nil
+		return true if @case[p2] == nil
+		
 	end
 end
 
@@ -102,6 +155,16 @@ class Tas
 	# création du tas avec toutes les pièces.
 	def initialize
 		@pieces = []
+
+		# 0 coccinelle top
+		# 1 coccinelle bottom
+		# 2 sauterelle top
+		# 3 sauterelle bottom
+		# 4 araignée top
+		# 5 araignée bottom
+		# 6 abeille top
+		# 7 abeille bottom
+
 		self << Piece.new(1, [4, 0, 1, 2])
 		self << Piece.new(2, [7, 2, 0, 5])
 		self << Piece.new(3, [3, 5, 7, 1])
@@ -128,7 +191,8 @@ class Tas
 		@pieces.delete(p)
 	end
 	
-	# retrouve les pièces contenant les chiffres passés en parametres (l:array).
+	# retrouve tous les pièces du tas contenant les id passés dans la liste l
+	# - l : est une liste []
 	def find(l=[])
 		list = []
 		@pieces.each { |p|
