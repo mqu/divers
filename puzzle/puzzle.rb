@@ -13,6 +13,7 @@ class Puzzle
 		@cases = []
 	end
 	
+	# insère la pièce "p" sur le puzzle sans gérer l'ordre.
 	def << p
 		@cases << p
 	end
