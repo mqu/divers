@@ -194,6 +194,8 @@ class Tas
 		else
 			p = @pieces[idx]
 		end
+		
+		# une pièce qui est prise est otée du tas.
 		@pieces.delete(p)
 	end
 	
@@ -236,7 +238,7 @@ when "tas:take"
 	pp tas
 	puts ("---------")
 	pp tas.take(0)
-	pp tas.take(0)
+	pp tas.take(:random)
 	pp tas
 
 when "tas:find"
