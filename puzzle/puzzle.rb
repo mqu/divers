@@ -29,13 +29,19 @@ class Puzzle
 	end
 
 	# insère la pièce "p" sur le puzzle sans gérer l'ordre.
+	# l'insersion est réalisée dans la première cellule vide.
 	def << p
-		@cases << p
+		@cases.each_index { |i|
+			if @cases[i] == nil
+				@cases[i] = p
+				return
+			end
+		}
 	end
 
 	def put p, idx
 		raise "index error" if idx<0 || idx > 8
-		@case[idx] = p
+		@cases[idx] = p
 	end
 
 	def reset
@@ -202,40 +208,54 @@ class Tas
 	end
 end
 
-tas = Tas.new
-pp tas
-puts ("---------")
-# pp tas.take(0)
-# pp tas.take(0)
-# pp tas
+case ARGV[0]
 
-# distribution non uniforme des pièces :
-# find : 0 ; 5
-# find : 1 ; 4
-# find : 2 ; 3
-# find : 3 ; 6
-# find : 4 ; 5
-# find : 5 ; 4
-# find : 6 ; 6
-# find : 7 ; 3
-#(0..7).each { |i|
-#	l = tas.find [i]
-#	puts "# find : #{i} ; #{l.length}"
-#	pp l
-#	puts "\n\n"
-#}
-pp tas.find [0, 1, 2]
-pp tas.find [7, 2, 0]
+when "puzzle"
 
-exit
+	puzzle = Puzzle.new
+	puzzle.reset
+	puzzle.put Piece.new(1, [4, 0, 1, 2]), 1
+	puzzle.put Piece.new(3, [4, 0, 1, 2]), 3
 
-solver = Solver.new(tas)
+	puzzle << Piece.new(0, [1, 2, 3 , 4])
+	puzzle << Piece.new(2, [2, 3 , 4, 1])
 
-pp solver
+	pp puzzle
 
+	puzzle.reset
+	pp puzzle
 
+when "tas:take"
+	tas = Tas.new
+	pp tas
+	puts ("---------")
+	pp tas.take(0)
+	pp tas.take(0)
+	pp tas
 
+when "tas:find"
+	# distribution non uniforme des pièces :
+	# find : 0 ; 5
+	# find : 1 ; 4
+	# find : 2 ; 3
+	# find : 3 ; 6
+	# find : 4 ; 5
+	# find : 5 ; 4
+	# find : 6 ; 6
+	# find : 7 ; 3
+	(0..7).each { |i|
+		l = tas.find [i]
+		puts "# find : #{i} ; #{l.length}"
+		pp l
+		puts "\n\n"
+	}
 
+	# pp tas.find [0, 1, 2]
+	# pp tas.find [7, 2, 0]
 
+when "solver"
+	solver = Solver.new(tas)
+	pp solver
 
+end
 
