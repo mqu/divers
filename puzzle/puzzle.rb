@@ -64,6 +64,7 @@ class Puzzle
 			when 6
 			when 7
 			when 8
+				return false
 		end
 	end
 	
@@ -72,14 +73,18 @@ class Puzzle
 	# - x1, x2 : sont les faces des pièces à matcher.
 	def matchx (p1, p2, x1, x2)
 		# une case vide match toujours !
-		return true if @case[p1] == nil
-		return true if @case[p2] == nil
+		return true if @cases[p1] == nil
+		return true if @cases[p2] == nil
 		
 	end
 
 	# check if puzzle solved.
 	def solved?
-		return false  # FIXME
+		(0..8).each { |i|
+			return false if @cases[i] == nil
+			return false if not self.match(i)
+		}
+		return true
 	end
 
 end
@@ -163,9 +168,13 @@ class Solver
 		pp @tas
 		pp @puzzle
 	end
+
+	def solved?
+		return @puzzle.solved?
+	end
 end
 
-# un solveur aléatoire : ne parviendra jamais à résoudre le problème.
+# un solveur aléatoire : ne parviendra jamais à résoudre le problème, sauf avec bcp de chance.
 class RandomSolver < Solver
 
 	def solve
@@ -290,5 +299,6 @@ when "random-solver"
 	solver = RandomSolver.new
 	solver.solve
 	solver.print
+	pp solver.solved?
 end
 
