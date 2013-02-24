@@ -201,15 +201,27 @@ class Tas
 		# 6 abeille top
 		# 7 abeille bottom
 
-		self << Piece.new(1, [4, 0, 1, 2])
-		self << Piece.new(2, [7, 2, 0, 5])
-		self << Piece.new(3, [3, 5, 7, 1])
-		self << Piece.new(4, [6, 4, 0, 3])
-		self << Piece.new(5, [6, 4, 3, 5])
-		self << Piece.new(6, [5, 0, 2, 6])
-		self << Piece.new(7, [6, 3, 1, 4])
-		self << Piece.new(8, [6, 7, 3, 0])
-		self << Piece.new(9, [6, 4, 1, 3])
+		# selon image
+		#1 - 5643 - 5 
+		#2 - 3146 - 7
+		#3 - 5026 - 6
+		#4 - 3167 - 8
+		#5 - 5720 - 2
+		#6 - 3641 - 9
+		#7 - 2401 - 1
+		#8 - 4036 - 8
+		#9 - 1357 - 3
+
+
+		self << Piece.new(1, [4, 0, 1, 2]) # 7
+		self << Piece.new(2, [7, 2, 0, 5]) # 5
+		self << Piece.new(3, [3, 5, 7, 1]) # 9
+		self << Piece.new(4, [6, 4, 0, 3]) # 8
+		self << Piece.new(5, [6, 4, 3, 5]) # 1
+		self << Piece.new(6, [5, 0, 2, 6]) # 3
+		self << Piece.new(7, [6, 3, 1, 4]) # 2
+		self << Piece.new(8, [6, 7, 3, 0]) -> 3167 -> 4
+		self << Piece.new(9, [6, 4, 1, 3]) # 6
 	end
 
 	# ajouter un pièce dans le tas.
