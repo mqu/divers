@@ -40,11 +40,11 @@ class Puzzle
 			1 => [['1:2', '0:0'], ['1:0', '2:2'], ['1:1', '4:3']],
 			2 => [['2:2', '1:0'], ['2:1', '5:3']],
 			3 => [['3:3', '0:1'], ['3:0', '4:2'], ['3:1', '6:3']],
-			4 => [],
-			5 => [],
-			6 => [],
-			7 => [],
-			8 => []
+			4 => [['4:3', '1:1'], ['4:2', '3:0'], ['4:0', '5:2'], ['4:1', '7:3']],
+			5 => [['5:3', '2:1'], ['5:2', '4:0'], ['5:1', '8:3']],
+			6 => [['6:3', '3:1'], ['6:0', '7:2']],
+			7 => [['7:2', '6:0'], ['7:3', '4:1'], ['7:0', '8:2']],
+			8 => [['8:2', '7:0'], ['8:3', '5:1']]
 		}
 		self.reset
 	end
@@ -169,7 +169,7 @@ class Piece
 	def reset
 		@rotate = 0
 		self
-	end
+	endtotalmatc
 	
 	# check if Piece contains array 'l' of values.
 	def contains l
@@ -202,7 +202,7 @@ class Solver
 		
 		m2 = memory_usage
 		
-		printf("memory : %d\n", (m2 - m1))
+		printf("memory : %d\n", (m2 - m1))totalmatc
 	end
 
 	def print
@@ -219,7 +219,7 @@ end
 class RandomSolver < Solver
 
 	def solve
-		(1..9).each {
+		(0..8).each {
 			@puzzle << @tas.take(:random)
 		}
 	end
@@ -232,7 +232,7 @@ class Tas
 	# création du tas avec toutes les pièces.
 	def initialize
 		@pieces = []
-
+totalmatc
 		# 0 coccinelle top
 		# 1 coccinelle bottom
 		# 2 sauterelle top
@@ -332,6 +332,18 @@ when "puzzle:match"
 	(0..8).each{ |i|
 		pp puzzle.match? i
 	}
+
+when "puzzle:solved"
+
+	puzzle = Puzzle.new
+	puzzle.reset
+
+	tas = Tas.new
+	(1..9).each{
+		puzzle << tas.take
+	}
+
+	puts "resolu" if puzzle.solved?
 
 when "tas:take"
 	tas = Tas.new
