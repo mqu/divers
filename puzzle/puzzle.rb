@@ -127,6 +127,11 @@ class Puzzle
 		return true
 	end
 
+	def to_s
+		@cases.each { |p|
+			puts p
+		}
+	end
 end
 
 class Piece
@@ -169,7 +174,7 @@ class Piece
 	def reset
 		@rotate = 0
 		self
-	endtotalmatc
+	end
 	
 	# check if Piece contains array 'l' of values.
 	def contains l
@@ -191,23 +196,12 @@ class Solver
 	
 	# not really a solver yet.
 	def solve
-		m1 = memory_usage
-		list = []
-		(1..1000).each{ |c|
-			p = Puzzle.new
-			@pieces.each { |i| p << i}
-			list << p
-			puts c if c % 10000 == 1
-		}
-		
-		m2 = memory_usage
-		
-		printf("memory : %d\n", (m2 - m1))totalmatc
+
 	end
 
 	def print
-		pp @tas
-		pp @puzzle
+		# pp @tas
+		puts @puzzle
 	end
 
 	def solved?
@@ -220,7 +214,9 @@ class RandomSolver < Solver
 
 	def solve
 		(0..8).each {
-			@puzzle << @tas.take(:random)
+			 p = @tas.take(:random)
+			 p.rotate(:forward, rand(0..3))
+			 @puzzle << p
 		}
 	end
 end
@@ -232,7 +228,7 @@ class Tas
 	# création du tas avec toutes les pièces.
 	def initialize
 		@pieces = []
-totalmatc
+
 		# 0 coccinelle top
 		# 1 coccinelle bottom
 		# 2 sauterelle top
@@ -384,9 +380,14 @@ when "piece:rotate"
 	puts p
 
 when "solver:random"
-	solver = RandomSolver.new
-	solver.solve
-	solver.print
-	pp solver.solved?
+
+	(1..1000000).each {
+		solver = RandomSolver.new
+		solver.solve   # rempli de facon aléatoire le puzzle
+		# solver.print
+		if solver.solved?
+			solver.print
+		end
+	}
 end
 
