@@ -25,6 +25,18 @@ class Puzzle
 	#		 1
 
 	def initialize
+		# voir schema-match.png
+		@specs = {
+			0 => [['0:0', '1:2'], ['0:1', '3:3']],
+			1 => [['1:2', '0:0'], ['1:0', '2:2'], ['1:1', '4:3']],
+			2 => [['2:2', '1:0'], ['2:1', '5:3']],
+			3 => [['3:3', '0:1'], ['3:0', '4:2'], ['3:1', '6:3']],
+			4 => [],
+			5 => [],
+			6 => [],
+			7 => [],
+			8 => []
+		}
 		self.reset
 	end
 
@@ -52,20 +64,14 @@ class Puzzle
 			nil, nil, nil]
 	end
 
-	def match pos
-		case pos
-			when 0
-				self.matchx(0, 1, 0, 2) && self.matchx(0, 3, 1, 3)
-			when 1
-			when 2
-			when 3
-			when 4
-			when 5
-			when 6
-			when 7
-			when 8
-				return false
-		end
+	def match? pos
+		puts "# Puzzle:match(#{pos})\n"
+
+		pp @specs[pos].each{ |x,y|
+			puts "match? #{x}, #{y}\n"
+		}
+		exit
+
 	end
 	
 	# vérifie si 2 pièces "match" (coincident)
@@ -80,10 +86,17 @@ class Puzzle
 
 	# check if puzzle solved.
 	def solved?
+	
+		# pour toutes les pièces
 		(0..8).each { |i|
+			# la case est encore vide : solved = false
 			return false if @cases[i] == nil
-			return false if not self.match(i)
+			
+			# sinon, est-ce que les pièces matchent entre elles.
+			return false if not self.match?(i)
 		}
+		
+		# sinon, ca match partout : le puzzle est résolu (solved) !
 		return true
 	end
 
@@ -201,27 +214,28 @@ class Tas
 		# 6 abeille top
 		# 7 abeille bottom
 
-		# selon image
-		#1 - 5643 - 5 
-		#2 - 3146 - 7
-		#3 - 5026 - 6
-		#4 - 3167 - 8
-		#5 - 5720 - 2
-		#6 - 3641 - 9
-		#7 - 2401 - 1
-		#8 - 4036 - 8
-		#9 - 1357 - 3
+		# inventaire Pierre
+		#self << Piece.new(1, [4, 0, 1, 2]) # 7
+		#self << Piece.new(2, [7, 2, 0, 5]) # 5
+		#self << Piece.new(3, [3, 5, 7, 1]) # 9
+		#self << Piece.new(4, [6, 4, 0, 3]) # 8
+		#self << Piece.new(5, [6, 4, 3, 5]) # 1
+		#self << Piece.new(6, [5, 0, 2, 6]) # 3
+		#self << Piece.new(7, [6, 3, 1, 4]) # 2
+		#self << Piece.new(8, [6, 7, 3, 1]) # 4
+		#self << Piece.new(9, [6, 4, 1, 3]) # 6
 
+		# inventaire selon image.
+		self << Piece.new(1, [2, 4, 0, 1])
+		self << Piece.new(2, [5, 7, 2, 0])
+		self << Piece.new(3, [1, 3, 5, 7])
+		self << Piece.new(4, [3, 1, 6, 7])
+		self << Piece.new(5, [5, 6, 4, 3])
+		self << Piece.new(6, [5, 0, 2, 6])
+		self << Piece.new(7, [3, 1, 4, 6])
+		self << Piece.new(8, [4, 0, 3, 6])
+		self << Piece.new(9, [3, 6, 4, 1])
 
-		self << Piece.new(1, [4, 0, 1, 2]) # 7
-		self << Piece.new(2, [7, 2, 0, 5]) # 5
-		self << Piece.new(3, [3, 5, 7, 1]) # 9
-		self << Piece.new(4, [6, 4, 0, 3]) # 8
-		self << Piece.new(5, [6, 4, 3, 5]) # 1
-		self << Piece.new(6, [5, 0, 2, 6]) # 3
-		self << Piece.new(7, [6, 3, 1, 4]) # 2
-		self << Piece.new(8, [6, 7, 3, 0]) -> 3167 -> 4
-		self << Piece.new(9, [6, 4, 1, 3]) # 6
 	end
 
 	# ajouter un pièce dans le tas.
@@ -230,7 +244,7 @@ class Tas
 	end
 
 	# prendre une pièce dans le tas : aléatoire ou suivant son index
-	def take(idx)
+	def take(idx=0)
 		if idx == :random
 			p = @pieces.sample
 		else
@@ -274,6 +288,18 @@ when "puzzle"
 
 	puzzle.reset
 	pp puzzle
+
+when "puzzle:match"
+
+	puzzle = Puzzle.new
+	puzzle.reset
+
+	tas = Tas.new
+	(1..9).each{
+		puzzle << tas.take
+	}
+
+	puzzle.match? 0
 
 when "tas:take"
 	tas = Tas.new
