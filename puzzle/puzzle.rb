@@ -69,8 +69,15 @@ class Puzzle
 
 		pp @specs[pos].each{ |x,y|
 			puts "match? #{x}, #{y}\n"
+			x = x.split(':')
+			y = y.split(':')
+			
+			p1 = x[0].to_i
+			p2 = y[0].to_i
+			bool = self.matchx(p1, p2, x[1].to_i, y[1].to_i)
+			pp bool
 		}
-		exit
+		
 
 	end
 	
@@ -78,10 +85,14 @@ class Puzzle
 	# - p1, p2 : sont les index des pièces sur @cases
 	# - x1, x2 : sont les faces des pièces à matcher.
 	def matchx (p1, p2, x1, x2)
+		puts "# Puzzle:matchx(#{p1}:#{x1}, #{p2}:#{x2})\n"
 		# une case vide match toujours !
 		return true if @cases[p1] == nil
 		return true if @cases[p2] == nil
-		
+		# return (a / 2 == b / 2 && a % 2 != b % 2);
+		# FIXME : ne tient pas compte de la rotation de la pièces !
+		# FIXME : ce ne sont pas les index (des pièces) qui faut comparer.
+		return (x1 / 2 == x2 / 2 && x1 % 2 != x2 % 2)
 	end
 
 	# check if puzzle solved.
