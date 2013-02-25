@@ -4,6 +4,7 @@
 # source location : https://github.com/mqu/divers/tree/master/puzzle
 
 require 'pp'
+# require 'backports' # gem install backports  / array:rotate / ruby 1.8
 
 def memory_usage 
 	memory_usage = `ps -o rss= -p #{Process.pid}`.to_i # in kilobytes 
@@ -26,6 +27,14 @@ class Puzzle
 
 	def initialize
 		# voir schema-match.png
+		# cette table permet de réaliser les matchs depuis une position
+		# sur le puzzle.
+		# connaissant la position (0..9), on sait quelles sont les pièces voisines
+		# et les cotés à vérifier.
+		# par exemple : la case 0 est voision de 1 et 3
+		# la vérification portera sur 0 (face0) <-> 1 (face2)
+		# ce qui se traduit par "0:0" <-> "1:2" donc ['0:0', '1:2']
+		#
 		@specs = {
 			0 => [['0:0', '1:2'], ['0:1', '3:3']],
 			1 => [['1:2', '0:0'], ['1:0', '2:2'], ['1:1', '4:3']],
@@ -56,6 +65,11 @@ class Puzzle
 		@cases[idx] = p
 	end
 
+	def [] idx
+		raise "index error" if idx<0 || idx > 8
+		@cases[idx]
+	end
+
 	def reset
 		# une case vide est marquée par nil
 		@cases = [
@@ -65,19 +79,18 @@ class Puzzle
 	end
 
 	def match? pos
-		puts "# Puzzle:match(#{pos})\n"
 
-		pp @specs[pos].each{ |x,y|
-			puts "match? #{x}, #{y}\n"
+		bool = true
+		@specs[pos].each{ |x,y|
 			x = x.split(':')
 			y = y.split(':')
 			
 			p1 = x[0].to_i
 			p2 = y[0].to_i
-			bool = self.matchx(p1, p2, x[1].to_i, y[1].to_i)
-			pp bool
+			bool = bool && self.matchx(p1, p2, x[1].to_i, y[1].to_i)
 		}
 		
+		return bool
 
 	end
 	
@@ -85,14 +98,17 @@ class Puzzle
 	# - p1, p2 : sont les index des pièces sur @cases
 	# - x1, x2 : sont les faces des pièces à matcher.
 	def matchx (p1, p2, x1, x2)
-		puts "# Puzzle:matchx(#{p1}:#{x1}, #{p2}:#{x2})\n"
+
 		# une case vide match toujours !
 		return true if @cases[p1] == nil
 		return true if @cases[p2] == nil
-		# return (a / 2 == b / 2 && a % 2 != b % 2);
-		# FIXME : ne tient pas compte de la rotation de la pièces !
-		# FIXME : ce ne sont pas les index (des pièces) qui faut comparer.
-		return (x1 / 2 == x2 / 2 && x1 % 2 != x2 % 2)
+
+		p1 = @cases[p1]
+		p2 = @cases[p2]
+		a = p1[x1]
+		b = p2[x2]
+
+		return (a / 2 == b / 2 && a % 2 != b % 2)
 	end
 
 	# check if puzzle solved.
@@ -124,12 +140,13 @@ class Piece
 		return sprintf(" %d : [%s] / %d", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
 	end
 	
-	def rotate r, count=1
+	def rotate r=:forward, count=1
 		case r
-			when :left
+			when :forward
 				@rotate += count
-			when :right
+			when :backward
 				@rotate -= count
+
 		end
 	end
 	
@@ -139,7 +156,7 @@ class Piece
 	
 	def rotate_to n
 		raise "error : can't find value #{n} for this Piece " + self.to_s unless self.has? n
-		self.rotate(:left, @values.index(n))
+		self.rotate(:forward, @values.index(n))
 		self
 	end
 	
@@ -237,15 +254,16 @@ class Tas
 		#self << Piece.new(9, [6, 4, 1, 3]) # 6
 
 		# inventaire selon image.
-		self << Piece.new(1, [2, 4, 0, 1])
-		self << Piece.new(2, [5, 7, 2, 0])
-		self << Piece.new(3, [1, 3, 5, 7])
-		self << Piece.new(4, [3, 1, 6, 7])
-		self << Piece.new(5, [5, 6, 4, 3])
-		self << Piece.new(6, [5, 0, 2, 6])
-		self << Piece.new(7, [3, 1, 4, 6])
-		self << Piece.new(8, [4, 0, 3, 6])
-		self << Piece.new(9, [3, 6, 4, 1])
+		self << Piece.new(1, [5, 6, 4, 3]) # 1
+		self << Piece.new(2, [3, 1, 4, 6]) # 2
+		self << Piece.new(3, [5, 0, 2, 6]) # 3
+		self << Piece.new(4, [3, 0, 6, 7]) # 4
+		self << Piece.new(5, [5, 7, 2, 0]) # 5
+		self << Piece.new(6, [3, 6, 4, 1]) # 6
+		self << Piece.new(7, [2, 4, 0, 1]) # 7
+		self << Piece.new(8, [4, 0, 3, 6]) # 8
+		self << Piece.new(9, [1, 3, 5, 7]) # 9
+
 
 	end
 
@@ -310,7 +328,10 @@ when "puzzle:match"
 		puzzle << tas.take
 	}
 
-	puzzle.match? 0
+	pp puzzle
+	(0..8).each{ |i|
+		pp puzzle.match? i
+	}
 
 when "tas:take"
 	tas = Tas.new
@@ -340,11 +361,17 @@ when "tas:find"
 	# pp tas.find [0, 1, 2]
 	# pp tas.find [7, 2, 0]
 
-when "solver"
-	solver = Solver.new(tas)
-	pp solver
-	
-when "random-solver"
+when "piece:rotate"
+	p = Piece.new(1, [4, 0, 1, 2])
+	puts p
+	p.rotate
+
+	p = Piece.new(4, [1, 2, 3, 4])
+	puts p
+	p.rotate
+	puts p
+
+when "solver:random"
 	solver = RandomSolver.new
 	solver.solve
 	solver.print
