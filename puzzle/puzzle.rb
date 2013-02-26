@@ -60,8 +60,8 @@ class Puzzle
 		}
 	end
 
-	def put p, idx
-		raise "index error" if idx<0 || idx > 8
+	def put idx, p
+		raise "index error" if idx<0 || idx>8
 		@cases[idx] = p
 	end
 
@@ -91,6 +91,26 @@ class Puzzle
 		}
 		
 		return bool
+
+	end
+
+	# retourne un tableau avec la liste des valeurs imposées par les pièces voisines
+	# - nil pour les cases vides,
+	# - ou la valeur
+	# l'ordre des cases est celui-ci :
+	#    3
+	#  2 x 0
+	#    1
+	
+	def constraints pos
+
+		bool = true
+
+		@specs[pos].each { |constraints|
+			pp constraints
+		}
+		
+		return []
 
 	end
 	
@@ -303,8 +323,8 @@ when "puzzle"
 
 	puzzle = Puzzle.new
 	puzzle.reset
-	puzzle.put Piece.new(1, [4, 0, 1, 2]), 1
-	puzzle.put Piece.new(3, [4, 0, 1, 2]), 3
+	puzzle.put 1, Piece.new(1, [4, 0, 1, 2])
+	puzzle.put 3, Piece.new(3, [4, 0, 1, 2])
 
 	puzzle << Piece.new(0, [1, 2, 3 , 4])
 	puzzle << Piece.new(2, [2, 3 , 4, 1])
@@ -328,6 +348,27 @@ when "puzzle:match"
 	(0..8).each{ |i|
 		pp puzzle.match? i
 	}
+
+when "puzzle:constraints"
+
+	puzzle = Puzzle.new
+	puzzle.reset
+
+	# 0 1 2
+	# 3 4 5
+	# 6 7 8
+	puzzle.put(0, Piece.new(1, [5, 6, 4, 3])) # 1
+	puzzle.put(1, Piece.new(2, [3, 1, 4, 6])) # 2
+	puzzle.put(2, Piece.new(3, [5, 0, 2, 6])) # 3
+	puzzle.put(3, Piece.new(4, [3, 0, 6, 7])) # 4
+	# puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
+	puzzle.put(5, Piece.new(6, [3, 6, 4, 1])) # 6
+	puzzle.put(6, Piece.new(7, [2, 4, 0, 1])) # 7
+	puzzle.put(7, Piece.new(8, [4, 0, 3, 6])) # 8
+	puzzle.put(8, Piece.new(9, [1, 3, 5, 7])) # 9
+
+	pp puzzle.constraints(4)
+	
 
 when "puzzle:solved"
 
@@ -381,7 +422,7 @@ when "piece:rotate"
 
 when "solver:random"
 
-	(1..1000000).each {
+	(1..100000).each {
 		solver = RandomSolver.new
 		solver.solve   # rempli de facon aléatoire le puzzle
 		# solver.print
