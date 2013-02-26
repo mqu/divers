@@ -10,20 +10,8 @@ def memory_usage
 	memory_usage = `ps -o rss= -p #{Process.pid}`.to_i # in kilobytes 
 end
 
-class Puzzle
-
-	# Puzzle :
-	#	- les cases : numérotées : 1..9 (0..8 pour le programme)
-	#	- disposition :
-	#		1 2 3 | 0 1 2 
-	#		4 5 6 | 3 4 5
-	#		7 8 9 | 6 7 8
-	#
-	# Piece :
-	# - possède 4 valeurs disposées sur chaque face.
-	# 	     3
-	#	   2 P 0
-	#		 1
+class PuzzleSpecs
+	attr_accessor :specs
 
 	def initialize
 		# voir schema-match.png
@@ -46,8 +34,49 @@ class Puzzle
 			7 => [['7:2', '6:0'], ['7:3', '4:1'], ['7:0', '8:2']],
 			8 => [['8:2', '7:0'], ['8:3', '5:1']]
 		}
+		@specs = self.optimize @specs
+	end
+
+	# éviter les opérations complexes sur la structure @specs (split)
+	def optimize specs
+		specs2 = {}
+		specs.each { |k,p|
+			recs = []
+			p.each { |rec|
+				x = rec[0].split(':')
+				y = rec[1].split(':')
+				recs << [x[0].to_i, x[1].to_i, y[0].to_i, y[1].to_i]
+			}
+			specs2[k] = recs
+		}
+
+		return specs2
+	end
+
+end
+
+SPECS = PuzzleSpecs.new
+
+class Puzzle
+
+	# Puzzle :
+	#	- les cases : numérotées : 1..9 (0..8 pour le programme)
+	#	- disposition :
+	#		1 2 3 | 0 1 2 
+	#		4 5 6 | 3 4 5
+	#		7 8 9 | 6 7 8
+	#
+	# Piece :
+	# - possède 4 valeurs disposées sur chaque face.
+	# 	     3
+	#	   2 P 0
+	#		 1
+
+	def initialize
+		@specs = SPECS.specs
 		self.reset
 	end
+
 
 	# insère la pièce "p" sur le puzzle sans gérer l'ordre.
 	# l'insersion est réalisée dans la première cellule vide.
@@ -79,19 +108,11 @@ class Puzzle
 	end
 
 	def match? pos
-
 		bool = true
-		@specs[pos].each{ |x,y|
-			x = x.split(':')
-			y = y.split(':')
-			
-			p1 = x[0].to_i
-			p2 = y[0].to_i
-			bool = bool && self.matchx(p1, p2, x[1].to_i, y[1].to_i)
+		@specs[pos].each{ |t|
+			bool = bool && self.matchx(t[0], t[2], t[1], t[3])
 		}
-		
 		return bool
-
 	end
 	
 	# vérifie si 2 pièces "match" (coincident)
@@ -128,9 +149,12 @@ class Puzzle
 	end
 
 	def to_s
+		s="Puzzle:\n"
 		@cases.each { |p|
-			puts p
+			
+			s << p.to_s
 		}
+		return s
 	end
 end
 
@@ -329,6 +353,12 @@ when "puzzle:match"
 		pp puzzle.match? i
 	}
 
+when "puzzle:optimize"
+
+	puzzle = Puzzle.new
+	puzzle.reset
+	pp puzzle
+
 when "puzzle:solved"
 
 	puzzle = Puzzle.new
@@ -381,13 +411,13 @@ when "piece:rotate"
 
 when "solver:random"
 
-	(1..1000000).each {
+	(1..100000).each {
 		solver = RandomSolver.new
 		solver.solve   # rempli de facon aléatoire le puzzle
 		# solver.print
-		if solver.solved?
-			solver.print
-		end
+		# if solver.solved?
+		#	solver.print
+		# end
 	}
 end
 
