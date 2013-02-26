@@ -195,6 +195,14 @@ class Piece
 		@values.rotate(@rotate%4)[i]
 	end
 	
+	def values
+		l = []
+		(0..3).each { |i|
+			l<<self[i]
+		}
+		return l
+	end
+
 	def reset
 		@rotate = 0
 		self
@@ -207,7 +215,6 @@ class Piece
 		}
 		
 		return true
-		
 	end
 end
 
@@ -253,25 +260,15 @@ class Tas
 	def initialize
 		@pieces = []
 
-		# 0 coccinelle top
-		# 1 coccinelle bottom
-		# 2 sauterelle top
-		# 3 sauterelle bottom
-		# 4 araignée top
-		# 5 araignée bottom
-		# 6 abeille top
-		# 7 abeille bottom
-
-		# inventaire Pierre
-		#self << Piece.new(1, [4, 0, 1, 2]) # 7
-		#self << Piece.new(2, [7, 2, 0, 5]) # 5
-		#self << Piece.new(3, [3, 5, 7, 1]) # 9
-		#self << Piece.new(4, [6, 4, 0, 3]) # 8
-		#self << Piece.new(5, [6, 4, 3, 5]) # 1
-		#self << Piece.new(6, [5, 0, 2, 6]) # 3
-		#self << Piece.new(7, [6, 3, 1, 4]) # 2
-		#self << Piece.new(8, [6, 7, 3, 1]) # 4
-		#self << Piece.new(9, [6, 4, 1, 3]) # 6
+		#                     distribution (non uniforme)
+		# 0 coccinelle top    5
+		# 1 coccinelle bottom 4
+		# 2 sauterelle top    3
+		# 3 sauterelle bottom 6 
+		# 4 araignée top      5
+		# 5 araignée bottom   4
+		# 6 abeille top       6
+		# 7 abeille bottom    2
 
 		# inventaire selon image.
 		self << Piece.new(1, [5, 6, 4, 3]) # 1
@@ -283,7 +280,6 @@ class Tas
 		self << Piece.new(7, [2, 4, 0, 1]) # 7
 		self << Piece.new(8, [4, 0, 3, 6]) # 8
 		self << Piece.new(9, [1, 3, 5, 7]) # 9
-
 
 	end
 
@@ -316,8 +312,21 @@ class Tas
 
 	# retrouve toutes les pièces ayant les id, mais dans l'ordre.
 	def find_strict(l=[])
-		# FIXME : à terminer.
-		self.find l
+		ll = []
+		r = self.find(l).each{ |p|
+			found = false
+			count=0
+			while (not found) && (count<4)
+				if p.values.join.include?(l.join)
+					ll << p 
+					found = true
+				end
+				p.rotate
+				count +=1
+			end
+		}
+		
+		return ll
 	end
 end
 
@@ -380,15 +389,8 @@ when "tas:take"
 	pp tas
 
 when "tas:find"
-	# distribution non uniforme des pièces :
-	# find : 0 ; 5
-	# find : 1 ; 4
-	# find : 2 ; 3
-	# find : 3 ; 6
-	# find : 4 ; 5
-	# find : 5 ; 4
-	# find : 6 ; 6
-	# find : 7 ; 3
+
+	tas = Tas.new
 	(0..7).each { |i|
 		l = tas.find [i]
 		puts "# find : #{i} ; #{l.length}"
@@ -396,8 +398,41 @@ when "tas:find"
 		puts "\n\n"
 	}
 
-	# pp tas.find [0, 1, 2]
-	# pp tas.find [7, 2, 0]
+when "tas:find_strict"
+
+	tas = Tas.new
+
+	# pp tas.find [0, 1, 2] # > [ 7 : [2, 4, 0, 1] / 0]
+	# pp tas.find [7, 2, 0] # [ 5 : [5, 7, 2, 0] / 0]
+
+	# pp tas.find_strict [7, 0, 2] #-> []
+	# pp tas.find_strict [7, 2, 0] #-> [ 5 : [5, 7, 2, 0] / 0]
+	pp tas.find_strict [2, 0, 5, 7] #-> [ 5 : [0, 5, 7, 2] / 3]
+	pp tas.find_strict [2, 0, 7, 5] #->  []
+	pp tas.find_strict [4, 0, 1, 2] #-> [ 7 : [2, 4, 0, 1] / 0]
+	pp tas.find_strict [0, 1, 2, 4] #-> [ 7 : [0, 1, 2, 4] / 2]
+	pp tas.find_strict [1, 2, 4, 0] #-> [ 7 : [1, 2, 4, 0] / 3]
+
+
+when "tas:distribution"
+	# affiche la distribution des pièces
+	tas = Tas.new
+	res = {}
+	(0..7).each { |i|
+		l = tas.find [i]
+		res[i] = l.length
+	}
+	res.sort_by {|_key, value| value}.each { |k,v|
+		puts " - #{k} : #{v}"
+	}
+	# - 7 : 3
+	# - 2 : 3
+	# - 1 : 4
+	# - 5 : 4
+	# - 4 : 5
+	# - 0 : 5
+	# - 6 : 6
+	# - 3 : 6
 
 when "piece:rotate"
 	p = Piece.new(1, [4, 0, 1, 2])
@@ -415,9 +450,9 @@ when "solver:random"
 		solver = RandomSolver.new
 		solver.solve   # rempli de facon aléatoire le puzzle
 		# solver.print
-		# if solver.solved?
-		#	solver.print
-		# end
+		if solver.solved?
+			solver.print
+		end
 	}
 end
 
