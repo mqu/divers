@@ -183,15 +183,35 @@ class Puzzle
 	end
 
 	def to_s
-		s="Puzzle:\n"
+		s=sprintf("Puzzle: [%s]\n", self.id)
 		@cases.each { |p|
 			s << p.to_s
 		}
 		return s
 	end
+	
+	# sorte d'identifiant unique pour un puzzle résolu (ou pas?)
+	def id
+		l=[]
+		
+		# id des pièces
+		@cases.each { |p|
+			l << p.id
+		}
+		
+		# suivi de l'angle de rotation
+		@cases.each { |p|
+			l << p.r
+		}
+		
+		# la liste est jointe et retournée sous forme de chaine.
+		return l.join
+	end
 end
 
 class Piece
+	attr_accessor :id, :values
+
 	def initialize id, v
 		@values = v
 		@id = id
@@ -222,12 +242,15 @@ class Piece
 		self
 	end
 	
+	# tient compte de la rotation.
 	def [] i
 		raise "error : index to big #{i} for this Piece " + self.to_s if i >= @values.length
 		raise "error : index to small #{i} for this Piece " + self.to_s if i < 0
 		@values.rotate(@rotate%4)[i]
 	end
 	
+	# tient compte de la rotation (voir self.[]) ; ce ne serait pas le cas de @values
+	# la rotation affecte l'ordre des valeurs retournées.
 	def values
 		l = []
 		(0..3).each { |i|
@@ -248,6 +271,10 @@ class Piece
 		}
 		
 		return true
+	end
+	
+	def r
+		@rotate
 	end
 end
 
@@ -356,13 +383,13 @@ class CentralSolver < Solver
 				return @puzzle
 			else
 				# ne devrait pas arriver.
-				puts "## 2 : error : puzzle complet mais pas résolu"
+				puts "### 2 : error : puzzle complet mais pas résolu"
 				puts @puzzle
 				puts @tas
 				return false
 			end
 		else
-			puts "## 3 : non résolu ..."
+			puts "### 3 : non résolu ..."
 			return false
 		end
 	end
