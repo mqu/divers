@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/ruby -w
 # coding: UTF-8
 
 # source location : https://github.com/mqu/divers/tree/master/puzzle
@@ -7,7 +7,7 @@ require 'pp'
 # require 'backports' # gem install backports  / array:rotate / ruby 1.8
 
 def memory_usage 
-	memory_usage = `ps -o rss= -p #{Process.pid}`.to_i # in kilobytes 
+	`ps -o rss= -p #{Process.pid}`.to_i # in kilobytes 
 end
 
 class PuzzleSpecs
@@ -125,12 +125,10 @@ class Puzzle
 	
 	def constraints pos
 
-		bool = true
-
 		list = [nil, nil, nil, nil]
 		@specs[pos].each { |c|
-			pp c
-			p = c[2]
+			# puts "# constraints :" ; pp c
+			# pp @cases[c[2]]
 			if @cases[c[2]]!=nil
 				list[c[1]] = self.opposite(@cases[c[2]][c[3]])
 			end
@@ -297,15 +295,23 @@ class CentralSolver < Solver
 		# 3 4 5
 		# 6 7 8
 		
+
 		# case centrale (4)
-		p4 = @tas.take(:random)
-		p4.rotate(:forward, rand(0..3))
-		@puzzle.put(4, p)
-		puts "p4" ; pp p4
+		# p4 = @tas.take(4)
+		# p4.rotate(:forward, rand(0..3))
+		# @puzzle.put(4, p)
+		@puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
+		
+		puts "# après avoir posé pièce 4"
+		puts ":tas:" ; pp @tas
+		puts ":puzzle:" ; pp @puzzle
+
 		[1, 3, 5, 7].each { |i|
 			# FIXME : à terminer.
+			puts "- i=#{i} : "
 			c = @puzzle.constraints(i)
-			puts "c : #{i}" ; pp c
+			printf "   constraints : #{i} : " ; pp c
+			pp @tas.find_with_constraints(c)
 		}
 	end
 end
@@ -371,7 +377,7 @@ class Tas
 	# retrouve toutes les pièces ayant les id, mais dans l'ordre.
 	def find_strict(l=[])
 		ll = []
-		r = self.find(l).each{ |p|
+		self.find(l).each{ |p|
 			found = false
 			count=0
 			while (not found) && (count<4)
@@ -384,6 +390,52 @@ class Tas
 			end
 		}
 		
+		return ll
+	end
+
+	# retrouve dans le tas les pièces dont les contraintes 
+	# sont énnoncées par c
+	#
+	# exemple : find_with_constraints(c=[1, nil, 4, nil])
+	# - c doit être un tableau de 4 éléments représentant les 4 valeurs (faces) d'une pièce
+	# - nil indique une non contrainte.
+	#
+	def find_with_constraints(c=[])
+	
+		# liste de retour. contiendra une liste de pièces dont les faces sont identiques à la contrainte "c"
+		ll = []
+
+		# on récupère la liste sans les nil c.delete_if{|e| e==nil}
+		# et on fait une première sélection self.find sur cette liste
+		cc = c.clone
+		cc.delete_if{|e| e==nil}
+
+		self.find(cc).each{ |p|
+			found = false
+			count=0
+	
+			# on essaie de faire matcher la liste, éventuellement en faisant tourne la pièce
+			while (not found) && (count<4)
+				# on clone la pièce pour éviter de modifier l'orinal qui sera retourné si match
+				pp = p.values.clone
+				# on remplace les nil sur la pièce clonée (pp) par les valeurs de c
+				# ce qui permettra d'ignorer les nil lors de la comparaison ci-dessous
+				(0..3).each { |i|
+					pp[i] = nil if c[i] == nil
+				}
+				
+				# les 2 pièces sont identiques, en ignorant les nil
+				if pp=c
+					# arretons de tourner en rond.
+					found=true
+					p.reset
+					# ajout dans la liste des résultats
+					ll << p
+				end
+				count +=1
+				p.rotate
+			end
+		}
 		return ll
 	end
 end
@@ -432,13 +484,15 @@ when "puzzle:constraints"
 	# puzzle.put(1, Piece.new(2, [3, 1, 4, 6])) # 2
 	# puzzle.put(2, Piece.new(3, [5, 0, 2, 6])) # 3
 	# puzzle.put(3, Piece.new(4, [3, 0, 6, 7])) # 4
-	# puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
-	puzzle.put(5, Piece.new(6, [3, 6, 4, 1])) # 6
+	puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
+	# puzzle.put(5, Piece.new(6, [3, 6, 4, 1])) # 6
 	# puzzle.put(6, Piece.new(7, [2, 4, 0, 1])) # 7
-	puzzle.put(7, Piece.new(8, [4, 0, 3, 6])) # 8
+	# puzzle.put(7, Piece.new(8, [4, 0, 3, 6])) # 8
 	# puzzle.put(8, Piece.new(9, [1, 3, 5, 7])) # 9
 
-	pp puzzle.constraints(8)
+	puts puzzle
+
+	pp puzzle.constraints(1)
 
 when "puzzle:optimize"
 
@@ -461,7 +515,6 @@ when "puzzle:solved"
 when "tas:take"
 	tas = Tas.new
 	pp tas
-	puts ("---------")
 	pp tas.take(0)
 	pp tas.take(:random)
 	pp tas
@@ -490,6 +543,14 @@ when "tas:find_strict"
 	pp tas.find_strict [4, 0, 1, 2] #-> [ 7 : [2, 4, 0, 1] / 0]
 	pp tas.find_strict [0, 1, 2, 4] #-> [ 7 : [0, 1, 2, 4] / 2]
 	pp tas.find_strict [1, 2, 4, 0] #-> [ 7 : [1, 2, 4, 0] / 3]
+
+when "tas:find_constraints"
+
+	tas = Tas.new
+
+	# pp tas.find_with_constraints [5, 0, 2, 6]
+	pp tas.find_with_constraints [6, nil, nil, 2]
+
 
 
 when "tas:distribution"
