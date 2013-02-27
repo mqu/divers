@@ -185,7 +185,6 @@ class Puzzle
 	def to_s
 		s="Puzzle:\n"
 		@cases.each { |p|
-			
 			s << p.to_s
 		}
 		return s
@@ -200,7 +199,7 @@ class Piece
 	end
 	
 	def to_s
-		return sprintf(" %d : [%s] / %d", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
+		return sprintf(" - %d : [%s] / %d\n", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
 	end
 	
 	def rotate r=:forward, count=1
@@ -294,25 +293,78 @@ class CentralSolver < Solver
 		# 0 1 2
 		# 3 4 5
 		# 6 7 8
-		
 
-		# case centrale (4)
-		# p4 = @tas.take(4)
-		# p4.rotate(:forward, rand(0..3))
-		# @puzzle.put(4, p)
-		@puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
+		# on tire une pièce au hazard dans le tas
+		p = @tas.take(:random)
 		
-		puts "# après avoir posé pièce 4"
-		puts ":tas:" ; pp @tas
-		puts ":puzzle:" ; pp @puzzle
+		# elle est tournée aléatoirement.
+		p.rotate(:forward, rand(0..3))
+		
+		# puis la pièce est posée sur dans le puzzle, à la position 4 (centre)
+		@puzzle.put(4, p)
 
-		[1, 3, 5, 7].each { |i|
-			# FIXME : à terminer.
-			puts "- i=#{i} : "
-			c = @puzzle.constraints(i)
-			printf "   constraints : #{i} : " ; pp c
-			pp @tas.find_with_constraints(c)
-		}
+		begin
+			[1, 3, 5, 7].each { |i|
+				c = @puzzle.constraints(i)
+				l =  @tas.find_with_constraints(c)
+
+				# arrive assez rarement : apres avoir placé qq pièces, on a pas de soluce à ce niveau
+				raise "error : liste vide" if l.length==0
+
+				# prendre une pièce au hasard dans la liste
+				p = l.sample
+				
+				# la retirer du tas
+				@tas.take(p)
+				
+				# l'inserer dans le puzzle ; quid de la rotation ?
+				@puzzle.put(i, p)
+
+			}
+			
+			# terminer par les coins.
+			[0, 2, 6, 8].each { |i|
+				c = @puzzle.constraints(i)
+				l =  @tas.find_with_constraints(c)
+				
+				if(l.length > 0)
+					# prendre une pièce au hasard dans la liste
+					p = l.sample
+
+					# la retirer du tas
+					@tas.take(p)
+					
+					# l'inserer dans le puzzle ; quid de la rotation ?
+					@puzzle.put(i, p)
+				else
+					# printf("#### pas de solution pour cette contrainte (%d) dans le tas : [%s]\n", i, c.join(', '))
+					# puts @tas
+					# puts @puzzle
+					# pas de solution trouvée dans le tas ; on abandonne la boucle.
+					break
+				end
+			}
+		rescue => e
+			# puts "erreur : pas de solution"
+		end
+
+		if(@tas.size == 0)
+			if @puzzle.solved?
+				puts "## 1 : puzzle résolu : "
+				puts @puzzle
+				puts @tas
+				return @puzzle
+			else
+				# ne devrait pas arriver.
+				puts "## 2 : error : puzzle complet mais pas résolu"
+				puts @puzzle
+				puts @tas
+				return false
+			end
+		else
+			puts "## 3 : non résolu ..."
+			return false
+		end
 	end
 end
 
@@ -352,12 +404,24 @@ class Tas
 		@pieces << p
 	end
 
-	# prendre une pièce dans le tas : aléatoire ou suivant son index
-	def take(idx=0)
-		if idx == :random
+	# retourne le nombre de pièces disponibles dans le tas
+	def size
+		@pieces.length
+	end
+
+	# prendre une pièce dans le tas : 
+	#  - aléatoire ou suivant son index
+	#  - ou une pièce si idx_or_p est une pièce.
+	def take(idx_or_p=0)
+		raise "error : parametre ne peut pas être nil" if idx_or_p == nil
+		if idx_or_p == :random
 			p = @pieces.sample
+		elsif idx_or_p.instance_of?(Piece)
+			# prendre une pièce ; ne rien faire ici.
+			p = idx_or_p
 		else
-			p = @pieces[idx]
+			# FIXME : erreur aléatoire : puzzle.rb:403:in `[]': no implicit conversion from nil to integer (TypeError)
+			p = @pieces[idx_or_p]
 		end
 		
 		# une pièce qui est prise est otée du tas.
@@ -438,6 +502,14 @@ class Tas
 		}
 		return ll
 	end
+	
+	def to_s
+		s = sprintf("Tas (reste %d) : \n", @pieces.length)
+		@pieces.each { |p|
+			s = s + p.to_s
+		}
+		return s
+	end
 end
 
 case ARGV[0]
@@ -515,8 +587,9 @@ when "puzzle:solved"
 when "tas:take"
 	tas = Tas.new
 	pp tas
-	pp tas.take(0)
-	pp tas.take(:random)
+	# pp tas.take(0)
+	# pp tas.take(:random)
+	pp tas.take(Piece.new(4, [3, 0, 6, 7]))
 	pp tas
 
 when "tas:find"
@@ -549,9 +622,13 @@ when "tas:find_constraints"
 	tas = Tas.new
 
 	# pp tas.find_with_constraints [5, 0, 2, 6]
-	pp tas.find_with_constraints [6, nil, nil, 2]
+	l = tas.find_with_constraints [6, nil, nil, 2]
+	pp tas
+	pp l
+	
+	tas.take l[0]
 
-
+	pp tas
 
 when "tas:distribution"
 	# affiche la distribution des pièces
@@ -595,9 +672,14 @@ when "solver:random"
 	}
 
 when "solver:central"
-
-	solver = CentralSolver.new
-	solver.solve 
+	(1..100000).each {
+		# print '.'
+		solver = CentralSolver.new
+		res = solver.solve 
+		if(res != false)
+			puts res
+		end
+	}
 
 end
 
