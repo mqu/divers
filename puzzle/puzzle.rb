@@ -127,11 +127,16 @@ class Puzzle
 
 		bool = true
 
-		@specs[pos].each { |constraints|
-			pp constraints
+		list = [nil, nil, nil, nil]
+		@specs[pos].each { |c|
+			pp c
+			p = c[2]
+			if @cases[c[2]]!=nil
+				list[c[1]] = self.opposite(@cases[c[2]][c[3]])
+			end
 		}
 		
-		return []
+		return list
 
 	end
 	
@@ -166,6 +171,17 @@ class Puzzle
 		
 		# sinon, ca match partout : le puzzle est résolu (solved) !
 		return true
+	end
+
+	# 0 -> 1, 1 -> 0
+	# 2 -> 3, 3 -> 2
+	# ...
+	def opposite n
+		if n%2 == 0
+			return n+1
+		else
+			return n-1
+		end
 	end
 
 	def to_s
@@ -268,6 +284,28 @@ class RandomSolver < Solver
 			 p = @tas.take(:random)
 			 p.rotate(:forward, rand(0..3))
 			 @puzzle << p
+		}
+	end
+end
+
+# solveur qui commence par la case du millieu
+# et essaie de trouver des pièces sur les 4 cotés (1, 3, 5, 7)
+# puis les coins.
+class CentralSolver < Solver
+	def solve
+		# 0 1 2
+		# 3 4 5
+		# 6 7 8
+		
+		# case centrale (4)
+		p4 = @tas.take(:random)
+		p4.rotate(:forward, rand(0..3))
+		@puzzle.put(4, p)
+		puts "p4" ; pp p4
+		[1, 3, 5, 7].each { |i|
+			# FIXME : à terminer.
+			c = @puzzle.constraints(i)
+			puts "c : #{i}" ; pp c
 		}
 	end
 end
@@ -390,17 +428,17 @@ when "puzzle:constraints"
 	# 0 1 2
 	# 3 4 5
 	# 6 7 8
-	puzzle.put(0, Piece.new(1, [5, 6, 4, 3])) # 1
-	puzzle.put(1, Piece.new(2, [3, 1, 4, 6])) # 2
-	puzzle.put(2, Piece.new(3, [5, 0, 2, 6])) # 3
-	puzzle.put(3, Piece.new(4, [3, 0, 6, 7])) # 4
+	# puzzle.put(0, Piece.new(1, [5, 6, 4, 3])) # 1
+	# puzzle.put(1, Piece.new(2, [3, 1, 4, 6])) # 2
+	# puzzle.put(2, Piece.new(3, [5, 0, 2, 6])) # 3
+	# puzzle.put(3, Piece.new(4, [3, 0, 6, 7])) # 4
 	# puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
 	puzzle.put(5, Piece.new(6, [3, 6, 4, 1])) # 6
-	puzzle.put(6, Piece.new(7, [2, 4, 0, 1])) # 7
+	# puzzle.put(6, Piece.new(7, [2, 4, 0, 1])) # 7
 	puzzle.put(7, Piece.new(8, [4, 0, 3, 6])) # 8
-	puzzle.put(8, Piece.new(9, [1, 3, 5, 7])) # 9
+	# puzzle.put(8, Piece.new(9, [1, 3, 5, 7])) # 9
 
-	pp puzzle.constraints(4)
+	pp puzzle.constraints(8)
 
 when "puzzle:optimize"
 
@@ -494,5 +532,11 @@ when "solver:random"
 			solver.print
 		end
 	}
+
+when "solver:central"
+
+	solver = CentralSolver.new
+	solver.solve 
+
 end
 
