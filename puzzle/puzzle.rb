@@ -10,7 +10,7 @@ def memory_usage
 	`ps -o rss= -p #{Process.pid}`.to_i # in kilobytes 
 end
 
-class PuzzleSpecs
+class PuzzleSpecsSingleton
 	attr_accessor :specs
 
 	def initialize
@@ -55,7 +55,7 @@ class PuzzleSpecs
 
 end
 
-SPECS = PuzzleSpecs.new
+SPECS = PuzzleSpecsSingleton.new
 
 class Puzzle
 
@@ -196,12 +196,20 @@ class Puzzle
 		
 		# id des pièces
 		@cases.each { |p|
-			l << p.id
+			if  p==nil
+				l<<'.'
+			else
+				l<< p.id
+			end
 		}
 		
 		# suivi de l'angle de rotation
 		@cases.each { |p|
-			l << p.r
+			if  p==nil
+				l<<'.'
+			else
+				l << p.r
+			end
 		}
 		
 		# la liste est jointe et retournée sous forme de chaine.
@@ -210,7 +218,7 @@ class Puzzle
 end
 
 class Piece
-	attr_accessor :id, :values
+	attr_reader :id, :values
 
 	def initialize id, v
 		@values = v
@@ -334,10 +342,10 @@ class CentralSolver < Solver
 			[1, 3, 5, 7].each { |i|
 				c = @puzzle.constraints(i)
 				l =  @tas.find_with_constraints(c)
-
 				# arrive assez rarement : apres avoir placé qq pièces, on a pas de soluce à ce niveau
-				raise "error : liste vide" if l.length==0
-
+				if l.length==0
+					raise "error : liste vide" 
+				end
 				# prendre une pièce au hasard dans la liste
 				p = l.sample
 				
@@ -378,6 +386,7 @@ class CentralSolver < Solver
 		if(@tas.size == 0)
 			if @puzzle.solved?
 				puts "## 1 : puzzle résolu : "
+				printf "## 1 : id : %s\n", @puzzle.id
 				puts @puzzle
 				puts @tas
 				return @puzzle
@@ -411,7 +420,7 @@ class Tas
 		# 4 araignée top      5
 		# 5 araignée bottom   4
 		# 6 abeille top       6
-		# 7 abeille bottom    2
+		# 7 abeille bottom    3
 
 		# inventaire selon image.
 		self << Piece.new(1, [5, 6, 4, 3]) # 1
@@ -589,8 +598,7 @@ when "puzzle:constraints"
 	# puzzle.put(7, Piece.new(8, [4, 0, 3, 6])) # 8
 	# puzzle.put(8, Piece.new(9, [1, 3, 5, 7])) # 9
 
-	puts puzzle
-
+	pp puzzle
 	pp puzzle.constraints(1)
 
 when "puzzle:optimize"
@@ -610,6 +618,7 @@ when "puzzle:solved"
 	}
 
 	puts "resolu" if puzzle.solved?
+	puts puzzle
 
 when "tas:take"
 	tas = Tas.new
