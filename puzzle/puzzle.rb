@@ -107,6 +107,7 @@ class Puzzle
 			nil, nil, nil]
 	end
 
+	# est-ce que la pièce posée sur la case 'pos' est OK ?
 	def match? pos
 		bool = true
 		@specs[pos].each{ |t|
@@ -183,10 +184,51 @@ class Puzzle
 	end
 
 	def to_s
-		s=sprintf("Puzzle: [%s]\n", self.id)
-		@cases.each { |p|
-			s << p.to_s
+		self.to_ascii
+	end
+
+	def to_ascii
+		s=sprintf("Puzzle (ascii) : [%s]\n", self.id)
+
+		# table de transcodage
+		# on converti les valeurs des animaux en A, B, C, D (tetes) et a, b, c, d pour le bas
+		tr = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd' ]
+
+		out = Array.new(9) {Array.new(9)}
+		out.each_with_index { |l,i|
+			l.each_with_index { |c,j|
+				out[i][j] = '.'
+			}
 		}
+		out.map {|l| l.map {|c| c='.'}}
+		(0..2).each{ |l|
+			i=l*3
+
+			f=3
+			out[i+0][1]   = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
+			out[i+0][1+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
+			out[i+0][1+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
+
+			f=2
+			out[i+1][0]   = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
+			out[i+1][0+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
+			out[i+1][0+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
+
+			f=0
+			out[i+1][2+0] = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
+			out[i+1][2+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
+			out[i+1][2+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
+
+			f=1
+			out[i+2][1+0] = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
+			out[i+2][1+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
+			out[i+2][1+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
+		}
+
+		
+		# print table
+		out.map {|l| s << l.join(' ') + "\n"}
+
 		return s
 	end
 	
@@ -218,7 +260,7 @@ class Puzzle
 end
 
 class Piece
-	attr_reader :id, :values
+	attr_reader :id
 
 	def initialize id, v
 		@values = v
@@ -229,7 +271,7 @@ class Piece
 	def to_s
 		return sprintf(" - %d : [%s] / %d\n", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
 	end
-	
+
 	def rotate count=1, r=:forward
 		case r
 			when :forward
@@ -372,16 +414,28 @@ class CentralSolver < Solver
 					
 					# l'inserer dans le puzzle ; quid de la rotation ?
 					@puzzle.put(i, p)
+					
+					# on vérifie que la pièce déposée match bien.
+					if not @puzzle.match? i
+						printf("## 5 erreur : la pièce posée ne coincide pas (case %d)!\n", i)
+						puts "pièce : ", p
+						printf("contrainte : [%s]\n", c.join(', '))
+						printf("list : [%s]\n", l.join(', '))
+						puts @puzzle
+						puts @tas
+						raise "erreur : la pièce posée ne coincide pas !"
+					end
 				else
-					# printf("#### pas de solution pour cette contrainte (%d) dans le tas : [%s]\n", i, c.join(', '))
-					# puts @tas
-					# puts @puzzle
+					printf("## 4 pas de solution pour cette contrainte (pièce %d) dans le tas : [%s]\n", i, c.join(', '))
+					puts @tas
+					puts @puzzle
 					# pas de solution trouvée dans le tas ; on abandonne la boucle.
 					break
 				end
 			}
 		rescue => e
 			# puts "erreur : pas de solution"
+			pp e
 		end
 
 		if(@tas.size == 0)
@@ -565,6 +619,17 @@ when "puzzle"
 
 	puzzle.reset
 	pp puzzle
+
+when "puzzle:ascii"
+
+	puzzle = Puzzle.new
+
+	tas = Tas.new
+	(1..8).each{
+		puzzle << tas.take
+	}
+
+	puts puzzle
 
 when "puzzle:match"
 
