@@ -1,7 +1,18 @@
 #!/usr/bin/ruby -w
 # coding: UTF-8
 
-# source location : https://github.com/mqu/divers/tree/master/puzzle
+=begin
+
+author : Marc Quinton, février 2013, licence : http://fr.wikipedia.org/wiki/WTFPL 
+
+source location : https://github.com/mqu/divers/tree/master/puzzle
+
+links : 
+
+backtracking :
+- http://www.hbmeyer.de/backtrack/backtren.htm
+
+=end
 
 require 'pp'
 # require 'backports' # gem install backports  / array:rotate / ruby 1.8
