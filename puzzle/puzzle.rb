@@ -383,6 +383,61 @@ class RandomSolver < Solver
 	end
 end
 
+class BrutForceSolver < Solver
+
+	def initialize
+		@puzzle = Puzzle.new
+		@tas = TasOrdonne.new  # pour ce type de solveur, nous avons besoin d'un tas qui gère les index
+		# @tas.suffle  # on mélange les pièces.
+	end
+
+	def solve
+		printf("# BruteForceSolver:solve\n")
+		
+		# on doit avoir un tas ordonné
+		raise "error" unless @tas.is_a? TasOrdonne
+
+		solutions = []
+
+		begin
+
+			(0..8).each { |p|
+				tas = @tas.clone
+				puzzle = @puzzle.clone
+				self.each_p tas, puzzle, p
+			}
+
+		rescue PuzzleException => e
+			# solutions << puzzle
+			puts "exeption"
+			pp e
+			raise
+		end
+	end
+
+	# p est l'index de la pièce à piocher dans le tas 
+	# r = nb rotation
+	def each_p tas, puzzle, _p
+		printf("# BruteForceSolver:each_p p=%d\n", _p)
+		
+		p = tas.take(_p)
+		puzzle << p
+
+		if tas.size > 0
+			_tas = @tas.clone
+			_puzzle = @puzzle.clone
+			self.each_p _tas, _puzzle, _p+1
+		else
+			# est-ce que le puzzle est valide
+			if puzzle.solved?
+				printf("## 1 : puzzle résolu\n")
+				puts puzzle
+			end
+		end
+
+	end
+end
+
 # solveur avec une partie aléatoire couplée à une stratégie de remplissage
 # - le solveur qui commence par la case du millieu
 # - et essaie de trouver des pièces sur les 4 cotés (1, 3, 5, 7)
@@ -491,10 +546,7 @@ class PseudoRandomSolver < Solver
 	end
 end
 
-# le tas est là ou sont placées les pièces avant d'être déposées sur la grille (puzzle).
-# c'est dans le Tas que sont crées toutes les instances de Pièces (à l'initialisation).
-class Tas
-
+class TasCommun
 	# création du tas avec toutes les pièces.
 	def initialize
 		@pieces = []
@@ -519,7 +571,6 @@ class Tas
 		self << Piece.new(7, [2, 4, 0, 1]) # 7
 		self << Piece.new(8, [4, 0, 3, 6]) # 8
 		self << Piece.new(9, [1, 3, 5, 7]) # 9
-
 	end
 
 	# ajouter un pièce dans le tas.
@@ -531,6 +582,24 @@ class Tas
 	def size
 		@pieces.length
 	end
+
+	def to_s
+		s = sprintf("Tas (reste %d) : \n", self.size)
+		@pieces.each { |p|
+			s = s + p.to_s
+		}
+		return s
+	end
+
+	def suffle
+		@pieces.shuffle!
+	end
+end
+
+
+# le tas est là ou sont placées les pièces avant d'être déposées sur la grille (puzzle).
+# c'est dans le Tas que sont crées toutes les instances de Pièces (à l'initialisation).
+class Tas < TasCommun
 
 	# prendre une pièce dans le tas : 
 	#  - aléatoire ou suivant son index
@@ -625,13 +694,28 @@ class Tas
 		}
 		return ll
 	end
+
+end
+
+# dans le Tas ordonné, les pièces peuvent être prise dans un ordre déterminé,
+# le rang des pièces est conservé
+# est utilisé pour le solveur de type force brute qui doit balayer tout un arbre
+# 
+class TasOrdonne < TasCommun
+	def take(idx)
+		if @pieces[idx]== nil
+			return false
+		else
+			p = @pieces[idx]
+			# on ne supprime pas la pièce ici, mais on la marque prise (nil)
+			@pieces[idx] = nil
+			return p
+		end
+	end
 	
-	def to_s
-		s = sprintf("Tas (reste %d) : \n", @pieces.length)
-		@pieces.each { |p|
-			s = s + p.to_s
-		}
-		return s
+	def size
+		l = @pieces.select { |p| p!=nil}
+		return l.length
 	end
 end
 
@@ -748,6 +832,21 @@ when "tas:find"
 		puts "\n\n"
 	}
 
+when "tas:ordonne"
+	puzzle = Puzzle.new
+	tas = TasOrdonne.new
+
+	(0..8).each { |i|
+		p = tas.take(i)
+		puts p
+		
+		puzzle << p
+	}
+
+	puts puzzle
+	puts tas
+	puts tas.size
+
 when "tas:find_strict"
 
 	tas = Tas.new
@@ -824,12 +923,19 @@ when "solver:random"
 		end
 	}
 
+when "solver:brute-force"
+
+	solver = BrutForceSolver.new
+	solutions = solver.solve
+	pp solutions
+
+
 when "solver:pseudo-random"
 
 	puzzles = {}
 	count = 0
 
-	(1..1000000).each { |iter|
+	(1..100000).each { |iter|
 		# print '.'
 		solver = PseudoRandomSolver.new
 		puzzle = solver.solve 
@@ -861,7 +967,7 @@ when "solver:pseudo-random"
 	puzzles.each { |k, rec|
 		puts rec[:puzzle]
 		printf "- trouvé %d fois : \n", rec[:count]
-		printf "- iterations (%s) \n", rec[:iters].join(", ")
+		# printf "- iterations (%s) \n", rec[:iters].join(", ")
 		puts '-'*60
 	}
 
