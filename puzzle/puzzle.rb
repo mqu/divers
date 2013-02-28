@@ -230,7 +230,7 @@ class Piece
 		return sprintf(" - %d : [%s] / %d\n", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
 	end
 	
-	def rotate r=:forward, count=1
+	def rotate count=1, r=:forward
 		case r
 			when :forward
 				@rotate += count
@@ -246,7 +246,7 @@ class Piece
 	
 	def rotate_to n
 		raise "error : can't find value #{n} for this Piece " + self.to_s unless self.has? n
-		self.rotate(:forward, @values.index(n))
+		self.rotate(@values.index(n))
 		self
 	end
 	
@@ -281,6 +281,7 @@ class Piece
 		return true
 	end
 	
+	# retourne la valeur de la rotation de la pièce
 	def r
 		@rotate
 	end
@@ -314,7 +315,7 @@ class RandomSolver < Solver
 	def solve
 		(0..8).each {
 			 p = @tas.take(:random)
-			 p.rotate(:forward, rand(0..3))
+			 p.rotate(rand(0..3))
 			 @puzzle << p
 		}
 	end
@@ -333,7 +334,7 @@ class CentralSolver < Solver
 		p = @tas.take(:random)
 		
 		# elle est tournée aléatoirement.
-		p.rotate(:forward, rand(0..3))
+		p.rotate(rand(0..3))
 		
 		# puis la pièce est posée sur dans le puzzle, à la position 4 (centre)
 		@puzzle.put(4, p)
