@@ -10,6 +10,12 @@ def memory_usage
 	`ps -o rss= -p #{Process.pid}`.to_i # in kilobytes 
 end
 
+class PuzzleException < Exception
+end
+
+class SolverException < PuzzleException
+end
+
 class PuzzleSpecsSingleton
 	attr_accessor :specs
 
@@ -184,7 +190,17 @@ class Puzzle
 	end
 
 	def to_s
-		self.to_ascii
+	
+		return self.to_ascii
+
+		s=sprintf("Puzzle: [%s]\n", self.id)
+		@cases.each_with_index { |p,i|
+			if p!= nil
+				s << p.to_s
+			else
+				s << " - #{i+1} : vide\n"
+			end
+		}
 	end
 
 	def to_ascii
@@ -286,9 +302,12 @@ class Piece
 		return @values.include? n
 	end
 	
-	def rotate_to n
-		raise "error : can't find value #{n} for this Piece " + self.to_s unless self.has? n
-		self.rotate(@values.index(n))
+	# permet de faire tourner une pièce pour que la face i porte la valeur v
+	def rotate_to v, i=0
+		i=i%4
+		while self.values[i] != v
+			self.rotate
+		end
 		self
 	end
 	
@@ -325,7 +344,7 @@ class Piece
 	
 	# retourne la valeur de la rotation de la pièce
 	def r
-		@rotate
+		@rotate%4
 	end
 end
 
@@ -360,13 +379,15 @@ class RandomSolver < Solver
 			 p.rotate(rand(0..3))
 			 @puzzle << p
 		}
+		return @puzzle
 	end
 end
 
-# solveur qui commence par la case du millieu
-# et essaie de trouver des pièces sur les 4 cotés (1, 3, 5, 7)
-# puis les coins.
-class CentralSolver < Solver
+# solveur avec une partie aléatoire couplée à une stratégie de remplissage
+# - le solveur qui commence par la case du millieu
+# - et essaie de trouver des pièces sur les 4 cotés (1, 3, 5, 7)
+# - puis les coins.
+class PseudoRandomSolver < Solver
 	def solve
 		# 0 1 2
 		# 3 4 5
@@ -387,19 +408,31 @@ class CentralSolver < Solver
 				l =  @tas.find_with_constraints(c)
 				# arrive assez rarement : apres avoir placé qq pièces, on a pas de soluce à ce niveau
 				if l.length==0
-					raise "error : liste vide" 
+					raise "ne peut résoudre ce puzzle ..." 
 				end
 				# prendre une pièce au hasard dans la liste
 				p = l.sample
-				
 				# la retirer du tas
 				@tas.take(p)
 				
-				# l'inserer dans le puzzle ; quid de la rotation ?
+				#printf("contrainte : [%s]\n", c.join(', '))
+				#printf("list : [%s]\n", l.join(', '))
+				#printf "pièce sélectionnée : " ; puts p
+
+				# faire tourner la pièce selon les contraintes.
+				# la première occurrence non nulle dans la liste c permet de faire tourner la pièce
+				c.each_with_index{ |v, j|
+					if v != nil
+						p.rotate_to(v,j)
+						break
+					end
+				}
+				# l'inserer dans le puzzle 
 				@puzzle.put(i, p)
 
 			}
-			
+
+		
 			# terminer par les coins.
 			[0, 2, 6, 8].each { |i|
 				c = @puzzle.constraints(i)
@@ -412,48 +445,47 @@ class CentralSolver < Solver
 					# la retirer du tas
 					@tas.take(p)
 					
-					# l'inserer dans le puzzle ; quid de la rotation ?
+					# l'inserer dans le puzzle
 					@puzzle.put(i, p)
-					
+
+					# faire tourner la pièce selon les contraintes.
+					# la première occurrence non nulle dans la liste c permet de faire tourner la pièce
+					c.each_with_index{ |v, j|
+						if v != nil
+							p.rotate_to(v,j)
+							break
+						end
+					}
+
 					# on vérifie que la pièce déposée match bien.
 					if not @puzzle.match? i
-						printf("## 5 erreur : la pièce posée ne coincide pas (case %d)!\n", i)
-						puts "pièce : ", p
-						printf("contrainte : [%s]\n", c.join(', '))
-						printf("list : [%s]\n", l.join(', '))
-						puts @puzzle
-						puts @tas
 						raise "erreur : la pièce posée ne coincide pas !"
 					end
 				else
-					printf("## 4 pas de solution pour cette contrainte (pièce %d) dans le tas : [%s]\n", i, c.join(', '))
-					puts @tas
-					puts @puzzle
 					# pas de solution trouvée dans le tas ; on abandonne la boucle.
 					break
 				end
 			}
 		rescue => e
-			# puts "erreur : pas de solution"
-			pp e
+			# puts "## erreur : pas de solution"
+			# p e
+			# pp e.backtrace
 		end
+
 
 		if(@tas.size == 0)
 			if @puzzle.solved?
-				puts "## 1 : puzzle résolu : "
-				printf "## 1 : id : %s\n", @puzzle.id
-				puts @puzzle
-				puts @tas
+				# puts "## 1 : puzzle résolu : "
 				return @puzzle
 			else
 				# ne devrait pas arriver.
-				puts "### 2 : error : puzzle complet mais pas résolu"
-				puts @puzzle
-				puts @tas
+				# puts "### 2 : error : puzzle complet mais pas résolu"
+				# puts @puzzle
+				# puts @tas
 				return false
 			end
 		else
-			puts "### 3 : non résolu ..."
+			# puts "### 3 : non résolu ..."
 			return false
 		end
 	end
@@ -774,25 +806,63 @@ when "piece:rotate"
 	p.rotate
 	puts p
 
+when "piece:rotate_to"
+	p = Piece.new(1, [4, 0, 1, 2])
+	puts p
+
+	(0..3).each { |i|
+		puts p.rotate_to(4,i)
+	}
+
 when "solver:random"
 
-	(1..100000).each {
+	(1..1000000).each {
 		solver = RandomSolver.new
-		solver.solve   # rempli de facon aléatoire le puzzle
-		# solver.print
-		if solver.solved?
-			solver.print
+		puzzle = solver.solve   # rempli de facon aléatoire le puzzle
+		if puzzle.solved?
+			puts puzzle
 		end
 	}
 
-when "solver:central"
-	(1..100000).each {
+when "solver:pseudo-random"
+
+	puzzles = {}
+	count = 0
+
+	(1..1000000).each { |iter|
 		# print '.'
-		solver = CentralSolver.new
-		res = solver.solve 
-		if(res != false)
-			puts res
+		solver = PseudoRandomSolver.new
+		puzzle = solver.solve 
+		if(puzzle != false)
+			id = puzzle.id
+			
+			# si la clé est dans la liste (ou pas)
+			if puzzles.key? puzzle.id
+				printf '.'
+				puzzles[id][:count] += 1
+				puzzles[id][:iters] << iter
+			else
+				printf '#'
+				puzzles[id] = {
+					:puzzle => puzzle,
+					:count  => 1,
+					:iters  => [iter]
+				}
+			end
 		end
+		count += 1
+	}
+	puts "\n"
+	sum=0
+	puzzles.each {|k,rec|
+		sum += rec[:count]
+	}
+	printf("nombre de solutions trouvées : %d (dont doublons : %d)/ %d\n", puzzles.length, sum - puzzles.length, count)
+	puzzles.each { |k, rec|
+		puts rec[:puzzle]
+		printf "- trouvé %d fois : \n", rec[:count]
+		printf "- iterations (%s) \n", rec[:iters].join(", ")
+		puts '-'*60
 	}
 
 end
