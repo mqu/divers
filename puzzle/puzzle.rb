@@ -27,6 +27,14 @@ end
 class SolverException < PuzzleException
 end
 
+# cette classe permet de déclarer les interdépedances entre toutes les pièces lorsqu'elles
+# sont placées dans une case du puzzle.
+# - les dépendances sont déclarées sous formes de couples (pi=piece, fi=face ) (p1:f1) - (p2:f2)
+# - la déclaration est réalisée sous forme de chaine de caractère facilitant la lisibilité,
+# - afin d'optimiser le fonctionnement, la méthode optimize() permet de transformer
+#   le couple en tableau : [p1, f1, p2, f2]
+# - une seule instance est nécessaire pour le fonctionnement du logiciel ; c'est donc une classe singleton.
+#
 class PuzzleSpecsSingleton
 	attr_accessor :specs
 
@@ -54,7 +62,8 @@ class PuzzleSpecsSingleton
 		@specs = self.optimize @specs
 	end
 
-	# éviter les opérations complexes sur la structure @specs (split)
+	# optimisation de la structure specs
+	# éviter la répétion des opérations complexes (split et to_i en particulier)
 	def optimize specs
 		specs2 = {}
 		specs.each { |k,p|
@@ -72,8 +81,21 @@ class PuzzleSpecsSingleton
 
 end
 
+# création d'une instance de la classe Singleton.
 SPECS = PuzzleSpecsSingleton.new
 
+# le puzzle est une classe de type container dans laquelle :
+# - on insère des pièces
+# - on vérifie que les pièces coincident entre elles,
+# - on vérifie sur le problème est résolu (solved?)
+# - c'est le puzzle qui donnera pour un emplacement donné, la liste des
+#   contraintes pour poser une pièces sous forme de liste : c=[v0, v1, v2, v3]
+#   - les valeurs v[0..3] représentent les faces des pièces à poser,
+#   - une valeur nil indique aucune contrainte sur la pièce à poser,
+#   - une valeur numérique indique la valeur imposée
+#   - l'ordre de la liste est important, mais la rotation de la liste permet
+#     de matcher plusieurs combinaisons.
+#
 class Puzzle
 
 	# Puzzle :
@@ -140,7 +162,7 @@ class Puzzle
 	#    3
 	#  2 x 0
 	#    1
-	
+	# - nil indique une non-contrainte
 	def constraints pos
 
 		list = [nil, nil, nil, nil]
@@ -158,8 +180,8 @@ class Puzzle
 	
 	# vérifie si 2 pièces "match" (coincident)
 	# - p1, p2 : sont les index des pièces sur @cases
-	# - x1, x2 : sont les faces des pièces à matcher.
-	def matchx (p1, p2, x1, x2)
+	# - f1, f2 : sont les faces des pièces à matcher.
+	def matchx (p1, p2, f1, f2)
 
 		# une case vide match toujours !
 		return true if @cases[p1] == nil
@@ -167,8 +189,8 @@ class Puzzle
 
 		p1 = @cases[p1]
 		p2 = @cases[p2]
-		a = p1[x1]
-		b = p2[x2]
+		a = p1[f1]
+		b = p2[f2]
 
 		return (a / 2 == b / 2 && a % 2 != b % 2)
 	end
@@ -215,7 +237,7 @@ class Puzzle
 	end
 
 	def to_ascii
-		s=sprintf("Puzzle (ascii) : [%s]\n", self.id)
+		s=sprintf("Puzzle : [%s]\n", self.id)
 
 		# table de transcodage
 		# on converti les valeurs des animaux en A, B, C, D (tetes) et a, b, c, d pour le bas
@@ -228,7 +250,7 @@ class Puzzle
 			}
 		}
 		out.map {|l| l.map {|c| c='.'}}
-		(0..2).each{ |l|
+		(0..2).each do |l|
 			i=l*3
 
 			f=3
@@ -250,8 +272,7 @@ class Puzzle
 			out[i+2][1+0] = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
 			out[i+2][1+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
 			out[i+2][1+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
-		}
-
+		end
 		
 		# print table
 		out.map {|l| s << l.join(' ') + "\n"}
@@ -259,33 +280,56 @@ class Puzzle
 		return s
 	end
 	
-	# sorte d'identifiant unique pour un puzzle résolu (ou pas?)
+	# identifiant unique pour un puzzle résolu (ou pas?)
+	# constitué de la concaténation des n° de pièce + rotation.
+	# permet d'identifier de manière unique un puzzle.
+	#
 	def id
 		l=[]
 		
 		# id des pièces
-		@cases.each { |p|
+		@cases.each do |p|
 			if  p==nil
 				l<<'.'
 			else
 				l<< p.id
 			end
-		}
+		end
 		
 		# suivi de l'angle de rotation
-		@cases.each { |p|
+		@cases.each do |p|
 			if  p==nil
 				l<<'.'
 			else
 				l << p.r
 			end
-		}
+		end
 		
 		# la liste est jointe et retournée sous forme de chaine.
 		return l.join
 	end
 end
 
+# la pièce :
+# - est potentiellement unique (dans ce jeu, c'est le cas)
+# - possède 
+#   - un id (numéro de rang) ; facilite la lisibilité pour le débugage,
+#   - 4 valeurs numériques,
+#   - un angle de rotation
+# - les méthodes :
+#   - rotation
+#   - has? : permet de savoir si la pièce contient une valeur
+#   - contains? (l) : permet de vérifier si la pièce contient la liste l
+#   - rotate_to : permet de faire tourner la pièce selon une contrainte déterminée (valeur, index)
+#
+# relations avec les autres classes :
+#  - Tas : 
+#    - ajouter : <<
+#    - prendre (take) selon index ou aléatoire
+#    - rechercher : find, find_strict, find_with_constraints
+#  - Puzzle
+#    - ajouter : <<, put
+#    - validation, vérification : match*
 class Piece
 	attr_reader :id
 
@@ -345,7 +389,7 @@ class Piece
 	end
 	
 	# check if Piece contains array 'l' of values.
-	def contains l
+	def contains? l
 		l.each { |e|
 			return false if ! self.has? e
 		}
@@ -359,6 +403,7 @@ class Piece
 	end
 end
 
+# classe de base  pour le solveur : déclatation de l'interface
 class Solver
 
 	def initialize
@@ -381,9 +426,9 @@ class Solver
 	end
 end
 
-# un solveur aléatoire : ne parviendra jamais à résoudre le problème, sauf avec bcp de chance.
+# un solveur aléatoire : ne parviendra jamais à résoudre le problème, sauf avec bcp de chance (itérrations)
+# l'intéret est surtout de montrer l'API et l'agencement des différentes méthodes.
 class RandomSolver < Solver
-
 	def solve
 		(0..8).each {
 			 p = @tas.take(:random)
@@ -394,6 +439,8 @@ class RandomSolver < Solver
 	end
 end
 
+# résolveur parcourant un arbre complet avec toutes les possibilités.
+# FIXME : à terminer ...
 class BrutForceSolver < Solver
 
 	def initialize
@@ -469,7 +516,7 @@ class PseudoRandomSolver < Solver
 		@puzzle.put(4, p)
 
 		begin
-			[1, 3, 5, 7].each { |i|
+			[1, 3, 5, 7].each do |i|
 				c = @puzzle.constraints(i)
 				l =  @tas.find_with_constraints(c)
 				# arrive assez rarement : apres avoir placé qq pièces, on a pas de soluce à ce niveau
@@ -480,27 +527,23 @@ class PseudoRandomSolver < Solver
 				p = l.sample
 				# la retirer du tas
 				@tas.take(p)
-				
-				#printf("contrainte : [%s]\n", c.join(', '))
-				#printf("list : [%s]\n", l.join(', '))
-				#printf "pièce sélectionnée : " ; puts p
 
 				# faire tourner la pièce selon les contraintes.
 				# la première occurrence non nulle dans la liste c permet de faire tourner la pièce
-				c.each_with_index{ |v, j|
+				c.each_with_index do |v, j|
 					if v != nil
 						p.rotate_to(v,j)
 						break
 					end
-				}
+				end
 				# l'inserer dans le puzzle 
 				@puzzle.put(i, p)
 
-			}
+			end
 
 		
 			# terminer par les coins.
-			[0, 2, 6, 8].each { |i|
+			[0, 2, 6, 8].each do |i|
 				c = @puzzle.constraints(i)
 				l =  @tas.find_with_constraints(c)
 				
@@ -516,12 +559,12 @@ class PseudoRandomSolver < Solver
 
 					# faire tourner la pièce selon les contraintes.
 					# la première occurrence non nulle dans la liste c permet de faire tourner la pièce
-					c.each_with_index{ |v, j|
+					c.each_with_index do |v, j|
 						if v != nil
 							p.rotate_to(v,j)
 							break
 						end
-					}
+					end
 
 					# on vérifie que la pièce déposée match bien.
 					if not @puzzle.match? i
@@ -531,7 +574,7 @@ class PseudoRandomSolver < Solver
 					# pas de solution trouvée dans le tas ; on abandonne la boucle.
 					break
 				end
-			}
+			end
 		rescue => e
 			# puts "## erreur : pas de solution"
 			# p e
@@ -541,22 +584,21 @@ class PseudoRandomSolver < Solver
 
 		if(@tas.size == 0)
 			if @puzzle.solved?
-				# puts "## 1 : puzzle résolu : "
+				# on a trouvé une solution acceptable ; on retourne la réponse.
 				return @puzzle
 			else
 				# ne devrait pas arriver.
-				# puts "### 2 : error : puzzle complet mais pas résolu"
-				# puts @puzzle
-				# puts @tas
 				return false
 			end
 		else
-			# puts "### 3 : non résolu ..."
+			# le tas n'est pas vide ; on est manifestement sur une impasse : combinaison impossible.
+			# on retourne false, indiquant un échec du solveur.
 			return false
 		end
 	end
 end
 
+# classe commune au Tas et TasOrdonne (pile?)
 class TasCommun
 	# création du tas avec toutes les pièces.
 	def initialize
@@ -636,7 +678,7 @@ class Tas < TasCommun
 	def find(l=[])
 		list = []
 		@pieces.each { |p|
-			list << p if p.contains l
+			list << p if p.contains? l
 		}
 		return list
 	end
