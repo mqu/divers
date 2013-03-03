@@ -14,8 +14,13 @@ backtracking :
 
 matching edge puzzles :
 - http://en.wikipedia.org/wiki/Edge-matching_puzzle
-- http://grokcode.com/10/e2-the-np-complete-kids-game-with-the-2-million-prize/
 
+Eternity II puzzle :
+- http://www.eternity-puzzle.com/
+- http://www.cse.iitk.ac.in/users/cs365/2012/submissions/anirkus/cs365/projects/report.pdf
+ - http://home.iitk.ac.in/~anirkus/cs365/projects/slides.pdf
+- http://grokcode.com/10/e2-the-np-complete-kids-game-with-the-2-million-prize/
+ 
 =end
 
 require 'pp'
@@ -240,11 +245,17 @@ class Puzzle
 		}
 	end
 
+	def face_tr idx, f
+		# table de transcodage
+		# on converti les valeurs des animaux en A, B, C, D (têtes) et a, b, c, d pour le bas
+		_tr = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd' ]
+
+		return 'x' if @cases[idx] == nil
+		return _tr[@cases[idx][f]]
+	end
+
 	def to_ascii
 		s=sprintf("Puzzle : [%s]\n", self.id)
-
-		# table de transcodage
-		# on converti les valeurs des animaux en A, B, C, D (tetes) et a, b, c, d pour le bas
 		tr = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd' ]
 
 		out = Array.new(9) {Array.new(9)}
@@ -253,29 +264,14 @@ class Puzzle
 				out[i][j] = '.'
 			}
 		}
-		out.map {|l| l.map {|c| c='.'}}
-		(0..2).each do |l|
-			i=l*3
 
-			f=3
-			out[i+0][1]   = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
-			out[i+0][1+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
-			out[i+0][1+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
+		(0..2).each do |i|
 
-			f=2
-			out[i+1][0]   = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
-			out[i+1][0+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
-			out[i+1][0+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
+			f=0 ; (0..2).each { |j| out[i*3+1][j*3+2] = self.face_tr(i*3+j, f) }
+			f=1 ; (0..2).each { |j| out[i*3+2][j*3+1] = self.face_tr(i*3+j, f) }
+			f=2 ; (0..2).each { |j| out[i*3+1][j*3+0] = self.face_tr(i*3+j, f) }
+			f=3 ; (0..2).each { |j| out[i*3+0][j*3+1] = self.face_tr(i*3+j, f) }
 
-			f=0
-			out[i+1][2+0] = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
-			out[i+1][2+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
-			out[i+1][2+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
-
-			f=1
-			out[i+2][1+0] = (@cases[i]!=nil)?tr[@cases[i][f]]:'x'
-			out[i+2][1+3] = (@cases[i+1]!=nil)?tr[@cases[i+1][f]]:'x'
-			out[i+2][1+6] = (@cases[i+2]!=nil)?tr[@cases[i+2][f]]:'x'
 		end
 		
 		# print table
@@ -283,6 +279,7 @@ class Puzzle
 
 		return s
 	end
+
 	
 	# identifiant unique pour un puzzle résolu (ou pas?)
 	# constitué de la concaténation des n° de pièce + rotation.
@@ -802,7 +799,19 @@ when "puzzle:ascii"
 		puzzle << tas.take
 	}
 
-	puts puzzle
+	puts puzzle.to_ascii
+
+	# Puzzle : [12345678.00000000.]
+	# . b . . D . . D .
+	# C . c C . b B . c
+	# . D . . a . . A .
+	# . d . . A . . a .
+	# D . b B . c C . b
+	# . A . . d . . D .
+	# . a . . D . . x .
+	# A . B b . C x . x
+	# . C . . A . . x .
+
 
 when "puzzle:match"
 
