@@ -33,4 +33,4 @@ p a.pick_at 1 # get second element from array
 p f=a.first!  # f is removed from array
 p s=a.first   # s not removed from array
 pp a
-
+pp [1,2,3,4].shuffle
