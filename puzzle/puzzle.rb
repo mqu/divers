@@ -12,6 +12,10 @@ links :
 backtracking :
 - http://www.hbmeyer.de/backtrack/backtren.htm
 
+matching edge puzzles :
+- http://en.wikipedia.org/wiki/Edge-matching_puzzle
+- http://grokcode.com/10/e2-the-np-complete-kids-game-with-the-2-million-prize/
+
 =end
 
 require 'pp'
@@ -516,7 +520,7 @@ class PseudoRandomSolver < Solver
 		@puzzle.put(4, p)
 
 		begin
-			[1, 3, 5, 7].each do |i|
+			[1, 3, 5, 7].shuffle.each do |i|
 				c = @puzzle.constraints(i)
 				l =  @tas.find_with_constraints(c)
 				# arrive assez rarement : apres avoir placé qq pièces, on a pas de soluce à ce niveau
@@ -543,7 +547,7 @@ class PseudoRandomSolver < Solver
 
 		
 			# terminer par les coins.
-			[0, 2, 6, 8].each do |i|
+			[0, 2, 6, 8].shuffle.each do |i|
 				c = @puzzle.constraints(i)
 				l =  @tas.find_with_constraints(c)
 				
@@ -1021,7 +1025,7 @@ when "solver:pseudo-random"
 		puts rec[:puzzle]
 		printf "- trouvé %d fois : \n", rec[:count]
 		# printf "- iterations (%s) \n", rec[:iters].join(", ")
-		puts '-'*60
+		puts '-'*30
 	}
 
 end
