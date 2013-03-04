@@ -107,6 +107,8 @@ SPECS = PuzzleSpecsSingleton.new
 #
 class Puzzle
 
+	attr_reader  :tr
+
 	# Puzzle :
 	#	- les cases : numérotées : 1..9 (0..8 pour le programme)
 	#	- disposition :
@@ -121,8 +123,14 @@ class Puzzle
 	#		 1
 
 	def initialize
+
+		# table de transcodage
+		# on converti les valeurs des animaux en A, B, C, D (têtes) et a, b, c, d pour le bas
+		@tr = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd' ]
+
 		@specs = SPECS.specs
 		self.reset
+
 	end
 
 
@@ -187,6 +195,13 @@ class Puzzle
 
 	end
 	
+	def constraints_to_s l
+		_l=l.clone
+		l.each_with_index do |v,i|
+			_l[i] = @tr[v] if v != nil
+		end
+		return _l
+	end
 	# vérifie si 2 pièces "match" (coincident)
 	# - p1, p2 : sont les index des pièces sur @cases
 	# - f1, f2 : sont les faces des pièces à matcher.
@@ -233,30 +248,28 @@ class Puzzle
 
 	def to_s
 	
-		return self.to_ascii
+		# return self.to_ascii
+		s = self.to_ascii 
 
-		s=sprintf("Puzzle: [%s]\n", self.id)
+		s << sprintf("Puzzle: [%s]\n", self.id)
 		@cases.each_with_index { |p,i|
 			if p!= nil
-				s << p.to_s
+				s << sprintf(" - [%d] /%s", i, p.to_s)
 			else
-				s << " - #{i+1} : vide\n"
+				s << sprintf(" - [%d] / - vide\n", i)
 			end
 		}
+		return s
 	end
 
 	def face_tr idx, f
-		# table de transcodage
-		# on converti les valeurs des animaux en A, B, C, D (têtes) et a, b, c, d pour le bas
-		_tr = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd' ]
 
 		return 'x' if @cases[idx] == nil
-		return _tr[@cases[idx][f]]
+		return @tr[@cases[idx][f]]
 	end
 
 	def to_ascii
 		s=sprintf("Puzzle : [%s]\n", self.id)
-		tr = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd' ]
 
 		out = Array.new(9) {Array.new(9)}
 		out.each_with_index { |l,i|
@@ -345,13 +358,14 @@ class Piece
 	end
 
 	def rotate count=1, r=:forward
+		return self if count==0
 		case r
 			when :forward
 				@rotate += count
 			when :backward
 				@rotate -= count
-
 		end
+		return self
 	end
 	
 	def has? n
@@ -503,6 +517,110 @@ end
 # - puis les coins.
 class PseudoRandomSolver < Solver
 	def solve
+
+		# emplacement des cases dans le puzzle
+		# 0 1 2
+		# 3 4 5
+		# 6 7 8
+
+		begin
+		
+			# on commence par la position centrale du puzzle
+			l = [4]
+			# on commence par les 4 cotés de la pièce centrale
+			[1, 3, 5, 7].shuffle.each { |i| l << i} 
+
+			# puis on termine par les 4 coins
+			[0, 2, 6, 8].shuffle.each { |i| l << i} 
+	
+			l.each do |i|
+			
+				res = self.inserer_position(i) 
+				raise "erreur d'insertion" if res == :error
+				
+			end
+
+		rescue PuzzleException => e
+			puts "## erreur : pas de solution"
+			# p e
+			# pp e.backtrace
+		end
+
+		if(@tas.size == 0)
+			if @puzzle.solved?
+				# on a trouvé une solution acceptable ; on retourne la réponse.
+				return @puzzle
+			else
+				# ne devrait pas arriver.
+				return false
+			end
+		else
+			# le tas n'est pas vide ; on est manifestement sur une impasse : combinaison impossible.
+			# on retourne false, indiquant un échec du solveur.
+			return false
+		end
+	end
+	
+	def inserer_position pos
+
+		printf "## inserer_position %d\n", pos
+
+		if pos == 4
+			# on tire une pièce au hazard dans le tas
+			p = @tas.take(:random)
+			
+			# elle est tournée aléatoirement.
+			p.rotate(rand(0..3))
+			
+			# puis la pièce est posée sur dans le puzzle, à la position 4 (centre)
+			@puzzle.put(pos, p)
+			
+			return true
+		end
+
+		c = @puzzle.constraints(pos)
+		l =  @tas.find_with_constraints(c)
+		
+		# pas de pièce disponible avec les contraintes "c".
+		return false if( l.size == 0)
+
+		# prendre une pièce au hasard dans la liste
+		p = l.sample
+
+		# la retirer du tas
+		@tas.take(p)
+		
+		# l'inserer dans le puzzle
+		@puzzle.put(pos, p)
+
+		# faire tourner la pièce selon les contraintes.
+		# la première occurrence non nulle dans la liste c permet de faire tourner la pièce
+		c.each_with_index do |v, j|
+			if v != nil
+				p.rotate_to(v,j)
+				break
+			end
+		end
+
+		# on vérifie que la pièce déposée match bien ; en principe cela ne devrait pas arriver !
+		if not @puzzle.match? pos
+			# raise PuzzleException.new "erreur : la pièce posée ne coincide pas !"
+			printf "## match-error : %d\n", pos
+			printf "contraintes : [%s] / [%s]\n", c.join(','), @puzzle.constraints_to_s(c).join(',')
+			printf "liste : " ; pp l
+			printf "pièce : " ; pp p
+			printf "tas : "   ; pp @tas
+			printf "puzzle : " ; pp @puzzle
+			printf "tr table : [%s]\n", @puzzle.tr.join(',')
+			return :error
+		end
+		
+		# la pièce est posée et coincide.
+		return true
+		
+	end
+
+	def solve_sav
 		# 0 1 2
 		# 3 4 5
 		# 6 7 8
@@ -582,7 +700,6 @@ class PseudoRandomSolver < Solver
 			# pp e.backtrace
 		end
 
-
 		if(@tas.size == 0)
 			if @puzzle.solved?
 				# on a trouvé une solution acceptable ; on retourne la réponse.
@@ -597,10 +714,13 @@ class PseudoRandomSolver < Solver
 			return false
 		end
 	end
+
 end
 
 # classe commune au Tas et TasOrdonne (pile?)
 class TasCommun
+	attr_reader :pieces
+
 	# création du tas avec toutes les pièces.
 	def initialize
 		@pieces = []
@@ -748,7 +868,6 @@ class Tas < TasCommun
 		}
 		return ll
 	end
-
 end
 
 # dans le Tas ordonné, les pièces peuvent être prise dans un ordre déterminé,
@@ -844,34 +963,44 @@ when "puzzle:constraints"
 
 	puzzle = Puzzle.new
 	puzzle.reset
-
+	tas = Tas.new
+	pieces = Tas.new.pieces.clone
+	
 	# 0 1 2
 	# 3 4 5
 	# 6 7 8
+
 	# puzzle.put(0, Piece.new(1, [5, 6, 4, 3])) # 1
 	# puzzle.put(1, Piece.new(2, [3, 1, 4, 6])) # 2
 	# puzzle.put(2, Piece.new(3, [5, 0, 2, 6])) # 3
 	# puzzle.put(3, Piece.new(4, [3, 0, 6, 7])) # 4
-	puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
+	# puzzle.put(4, Piece.new(5, [5, 7, 2, 0])) # 5
 	# puzzle.put(5, Piece.new(6, [3, 6, 4, 1])) # 6
 	# puzzle.put(6, Piece.new(7, [2, 4, 0, 1])) # 7
 	# puzzle.put(7, Piece.new(8, [4, 0, 3, 6])) # 8
 	# puzzle.put(8, Piece.new(9, [1, 3, 5, 7])) # 9
 
-	# à tester :
-	#- 2 : [1, 4, 6, 3] / 1
-	#- 5 : [7, 2, 0, 5] / 1
-	#- 8 : [0, 3, 6, 4] / 1
-	#- 3 : [0, 2, 6, 5] / 1
-	#- 6 : [4, 1, 3, 6] / 2
-	#- 1 : [6, 4, 3, 5] / 1
-	#- 4 : [0, 6, 7, 3] / 1
-	#- 7 : [4, 0, 1, 2] / 1
-	#- 9 : [3, 5, 7, 1] / 1
- 
- 
+	#- [0] / - vide
+	#- [1] / - 3 : [0, 2, 6, 5] / 1
+	#- [2] / - vide
+	#- [3] / - 8 : [0, 3, 6, 4] / 1
+	#- [4] / - 6 : [6, 4, 1, 3] / 1
+	#- [5] / - 5 : [0, 5, 7, 2] / 3
+	#- [6] / - 7 : [2, 4, 0, 1] / 0
+	#- [7] / - 9 : [7, 1, 3, 5] / 3
+	#- [8] / - vide
+
+	puzzle.put(1, pieces[3-1].rotate(1))
+	puzzle.put(3, pieces[8-1].rotate(1))
+	puzzle.put(4, pieces[6-1].rotate(1))
+	puzzle.put(5, pieces[5-1].rotate(3))
+	puzzle.put(6, pieces[7-1].rotate(0))
+	puzzle.put(7, pieces[9-1].rotate(3))
+
 	pp puzzle
-	pp puzzle.constraints(1)
+	c = puzzle.constraints(6)
+	pp c
+	pp puzzle.constraints_to_s c
 
 when "puzzle:optimize"
 
@@ -942,16 +1071,16 @@ when "tas:find_strict"
 
 when "tas:find_constraints"
 
-	tas = Tas.new
+	tas = TasOrdonne.new
 
-	# pp tas.find_with_constraints [5, 0, 2, 6]
-	l = tas.find_with_constraints [6, nil, nil, 2]
+	# [0,1,2,3,4,5,6,7,8].each { |i| tas.take i}
+	[1,2,4,5,6,7].each { |i| tas.take i}
 	pp tas
-	pp l
 	
-	tas.take l[0]
+	# pp tas.find_with_constraints [5, 0, 2, 6]
+	l = tas.find_with_constraints [5,nil,nil,5]
+	pp l
 
-	pp tas
 
 when "tas:distribution"
 	# affiche la distribution des pièces
