@@ -795,24 +795,36 @@ when "puzzle:ascii"
 	puzzle = Puzzle.new
 
 	tas = Tas.new
-	(1..8).each{
+	(1..9).each{
 		puzzle << tas.take
 	}
 
-	puts puzzle.to_ascii
+	expected = <<-END
+	Puzzle : [123456789000000000]
+	. b . . D . . D .
+	C . c C . b B . c
+	. D . . a . . A .
+	. d . . A . . a .
+	D . b B . c C . b
+	. A . . d . . D .
+	. a . . D . . d .
+	A . B b . C c . a
+	. C . . A . . b .
+	END
+	expected.gsub!(/^\t/, '')
+	result = puzzle.to_s
 
-	# Puzzle : [12345678.00000000.]
-	# . b . . D . . D .
-	# C . c C . b B . c
-	# . D . . a . . A .
-	# . d . . A . . a .
-	# D . b B . c C . b
-	# . A . . d . . D .
-	# . a . . D . . x .
-	# A . B b . C x . x
-	# . C . . A . . x .
-
-
+	if result  != expected
+		puts "# not expected result !"
+		puts "\n# result : "
+		puts result
+		puts "\n# having : "
+		puts expected
+	else
+		puts "# OK ; it's expected result !"
+		puts result
+	end
+	
 when "puzzle:match"
 
 	puzzle = Puzzle.new
