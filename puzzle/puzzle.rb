@@ -20,7 +20,12 @@ Eternity II puzzle :
 - http://www.cse.iitk.ac.in/users/cs365/2012/submissions/anirkus/cs365/projects/report.pdf
  - http://home.iitk.ac.in/~anirkus/cs365/projects/slides.pdf
 - http://grokcode.com/10/e2-the-np-complete-kids-game-with-the-2-million-prize/
- 
+- http://eternity2blogger.over-blog.com/pages/Editor_and_Solver_for_Eternity_II-1767319.html
+
+en francais :
+- http://drgoulu.com/2008/01/13/eternity-ii/
+- http://royale.zerezo.com/eternity2/
+
 =end
 
 require 'pp'
