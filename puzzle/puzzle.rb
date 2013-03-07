@@ -12,6 +12,10 @@ links :
 backtracking :
 - http://www.hbmeyer.de/backtrack/backtren.htm
 
+algorithmes :
+ - http://fr.wikipedia.org/wiki/Algorithme_de_colonies_de_fourmis
+ - http://fr.wikipedia.org/wiki/Portail:Algorithmique
+ 
 matching edge puzzles :
 - http://en.wikipedia.org/wiki/Edge-matching_puzzle
 
@@ -155,12 +159,12 @@ class Puzzle
 	end
 
 	def put idx, p
-		raise "index error" if idx<0 || idx>8
+		raise PuzzleException "index error" if idx<0 || idx>8
 		@cases[idx] = p
 	end
 
 	def [] idx
-		raise "index error" if idx<0 || idx > 8
+		raise PuzzleException "index error" if idx<0 || idx > 8
 		@cases[idx]
 	end
 
@@ -265,7 +269,7 @@ class Puzzle
 		s << sprintf("Puzzle: [%s]\n", self.id)
 		@cases.each_with_index { |p,i|
 			if p!= nil
-				s << sprintf(" - [%d] /%s", i, p.to_s)
+				s << sprintf(" - [%d] /%s\n", i, p.to_s)
 			else
 				s << sprintf(" - [%d] / - vide\n", i)
 			end
@@ -365,7 +369,7 @@ class Piece
 	end
 	
 	def to_s
-		return sprintf(" - %d : [%s] / %d\n", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
+		return sprintf(" - %d : [%s] / %d", @id, @values.rotate(@rotate%4).join(', '), @rotate%4)
 	end
 
 	def rotate count=1, r=:forward
@@ -394,8 +398,8 @@ class Piece
 	
 	# tient compte de la rotation.
 	def [] i
-		raise "error : index to big #{i} for this Piece " + self.to_s if i >= @values.length
-		raise "error : index to small #{i} for this Piece " + self.to_s if i < 0
+		raise PuzzleException "error : index to big #{i} for this Piece " + self.to_s if i >= @values.length
+		raise PuzzleException "error : index to small #{i} for this Piece " + self.to_s if i < 0
 		@values.rotate(@rotate%4)[i]
 	end
 	
@@ -465,9 +469,13 @@ class RandomSolver < Solver
 	end
 end
 
+
 # résolveur parcourant un arbre complet avec toutes les possibilités.
 # FIXME : à terminer ...
 class BrutForceSolver < Solver
+
+	SolverContext = Struct.new :tas, :cases, :puzzle
+	# SolverResult = Struct.new :status, :list
 
 	def initialize
 		@puzzle = Puzzle.new
@@ -476,49 +484,127 @@ class BrutForceSolver < Solver
 	end
 
 	def solve
-		printf("# BruteForceSolver:solve\n") if DEBUG
-		
-		# on doit avoir un tas ordonné
-		raise "error" unless @tas.is_a? TasOrdonne && DEBUG
 
-		solutions = []
+		# emplacement des cases dans le puzzle
+		# 0 1 2
+		# 3 4 5
+		# 6 7 8
+		
+		# listes ordonnée des emplacements dans le puzzle
+		# ou on déposera les pièces.
+		cases = [4, [1, 3, 5, 7], [0, 2, 6, 8]].flatten!
+		
+		# liste des puzzles résolus.
+		@list = []
 
 		begin
 
-			(0..8).each { |p|
-				tas = @tas.clone
-				puzzle = @puzzle.clone
-				self.each_p tas, puzzle, p
-			}
-
-		rescue PuzzleException => e
-			# solutions << puzzle
-			puts "exeption"
-			pp e
-			raise
+			(0..8).each do |i|
+				_tas = @tas.clone
+				piece = @tas.take i
+				pos = cases.first
+				ctx = SolverContext.new(_tas, cases.clone, @puzzle.clone)
+	
+				# rotation de la pièce
+				(0..0).each do
+					status = self.insert_at_pos piece, pos, ctx
+					piece.rotate
+				end
+			end
 		end
-	end
-
-	# p est l'index de la pièce à piocher dans le tas 
-	# r = nb rotation
-	def each_p tas, puzzle, _p
-		printf("# BruteForceSolver:each_p p=%d\n", _p)
 		
-		p = tas.take(_p)
-		puzzle << p
+		return false
+	end
+	
+	def insert_at_pos piece, pos, ctx, level=0
 
-		if tas.size > 0
-			_tas = @tas.clone
-			_puzzle = @puzzle.clone
-			self.each_p _tas, _puzzle, _p+1
-		else
-			# est-ce que le puzzle est valide
-			if puzzle.solved?
-				printf("## 1 : puzzle résolu\n")
-				puts puzzle
+		_ctx = ctx.clone
+		indent = "  "*level
+		printf("%s # insert at : pos = %d, piece = %s \n", indent, pos, piece.to_s)
+		printf("%s   - cases = %s\n", indent, _ctx.cases.join(', '))
+		printf("%s   - tas (size) = %d\n", indent, _ctx.tas.size)
+		
+		if(ctx.tas.size == 0)
+			return
+
+		piece = _tas.take i
+		ctx.puzzle.put(pos, piece)
+		self.insert_at_pos(piece, pos, ctx, level+1)
+		return false
+
+	end
+	
+	def insert_at_pos_sav p_idx, cases_idx, tas, level=0, count=0
+
+		if where.size == 0
+			return []
+		end
+
+		_tas = tas.clone
+		_cases_idx = cases_idx.clone
+
+		pos = _cases_idx.shift
+		indent = "  " * level
+		piece = _tas.take p_idx
+	
+		printf("%s # insert : idx = %d, pos = %d \n", indent, p_idx, pos)
+
+		# pp tas
+		# pp piece
+		
+
+		res = self.insert_at_pos(p_idx, _cases_idx, _tas, level+1)
+		res[:count] += 1
+		
+	end
+	
+	def inserer_position pos
+
+		# c = contraintes associées à l'emplacement d'une pièce sur le puzzle
+		# l = listes des pièces dans le tas acceptant les contraintes.
+		c = @puzzle.constraints(pos)
+		l = @tas.find_with_constraints(c)
+		
+		# pas de pièce disponible avec les contraintes "c".
+		return false if( l.size == 0)
+
+		# prendre une pièce au hasard dans la liste
+		p = l.sample
+	
+		# la retirer du tas
+		@tas.take(p)
+		
+		# l'inserer dans le puzzle
+		@puzzle.put(pos, p)
+
+		# faire tourner la pièce selon les contraintes.
+		# la première occurrence non nulle dans la liste c permet de faire tourner la pièce
+		c.each_with_index do |v, j|
+			if v != nil
+				p.rotate_to(v,j)
+				break
 			end
 		end
 
+		# en mode DEBUG on continue (test) sinon, on retourne true.
+		return true if not DEBUG
+
+		# on vérifie que la pièce déposée match bien ; en principe cela ne devrait pas arriver sauf si erreur dans algo.
+		if not @puzzle.match? pos
+			# raise PuzzleException.new "erreur : la pièce posée ne coincide pas !"
+			printf "## match-error : %d\n", pos
+			printf "contraintes : [%s] / [%s]\n", c.join(','), @puzzle.constraints_to_s(c).join(',')
+			printf "liste : " ; pp l
+			printf "pièce : " ; pp p
+			printf "tas : "   ; pp @tas
+			printf "puzzle : " ; pp @puzzle
+			printf "tr table : [%s]\n", @puzzle.tr.join(',')
+			return :error
+		end
+		
+		# la pièce est posée et coincide.
+		return true
+		
 	end
 end
 
@@ -547,7 +633,7 @@ class PseudoRandomSolver < Solver
 			l.each do |i|
 			
 				res = self.inserer_position(i) 
-				raise "erreur d'insertion" if res == :error
+				raise SolverException "erreur d'insertion" if res == :error
 				
 			end
 
@@ -613,8 +699,10 @@ class PseudoRandomSolver < Solver
 			end
 		end
 
+		# en mode DEBUG on continue (test) sinon, on retourne true.
 		return true if not DEBUG
-		# on vérifie que la pièce déposée match bien ; en principe cela ne devrait pas arriver !
+
+		# on vérifie que la pièce déposée match bien ; en principe cela ne devrait pas arriver sauf si erreur dans algo.
 		if not @puzzle.match? pos
 			# raise PuzzleException.new "erreur : la pièce posée ne coincide pas !"
 			printf "## match-error : %d\n", pos
@@ -695,7 +783,7 @@ class Tas < TasCommun
 	#  - aléatoire ou suivant son index
 	#  - ou une pièce si idx_or_p est une pièce.
 	def take(idx_or_p=0)
-		raise "error : parametre ne peut pas être nil" if idx_or_p == nil
+		raise PuzzleException "error : parametre ne peut pas être nil" if idx_or_p == nil
 		if idx_or_p == :random
 			p = @pieces.sample
 		elsif idx_or_p.instance_of?(Piece)
